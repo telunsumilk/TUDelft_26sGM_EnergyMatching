@@ -1,4 +1,4 @@
-# Energy Matching 
+# Energy Matching  
 <img align="right" src="media/EM_2D.png" width="30%" alt="Energy Matching Illustration" />
 Energy Matching unifies flow matching and energy-based models in a single time-independent scalar field, enabling efficient transport between the source and target distributions while retaining explicit likelihood information for flexible, high-quality generation. [NeurIPS 2025]
 
