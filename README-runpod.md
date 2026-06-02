@@ -69,7 +69,7 @@ Or use the web terminal from the RunPod console.
 tmux new -s train
 
 # Download and run the setup script — installs repo + venv under /workspace
-curl -fsSL https://raw.githubusercontent.com/m1balcerak/EnergyMatching/main/setup.sh \
+curl -fsSL https://raw.githubusercontent.com/telunsumilk/TUDelft_26sGM_EnergyMatching/main/setup.sh \
   | bash -s -- /workspace
 ```
 
