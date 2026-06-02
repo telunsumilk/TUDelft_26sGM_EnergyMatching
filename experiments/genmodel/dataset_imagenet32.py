@@ -22,7 +22,7 @@ class ImageNet32Dataset(Dataset):
     If you need transforms (like random crops/flips or normalizing to [-1,1]),
     you can pass in a `transform` (typical PyTorch transforms) to apply in __getitem__.
     """
-    def __init__(self, split="train", transform=None, root=None):
+    def __init__(self, split="train", transform=None, root=None, class_indices=None):
         super().__init__()
 
         if split != "train":
@@ -83,6 +83,12 @@ class ImageNet32Dataset(Dataset):
         # Concatenate across all 10 files
         self.images = np.concatenate(all_images, axis=0)  # (N_total, 3, 32, 32)
         self.labels = np.concatenate(all_labels, axis=0)  # (N_total,)
+
+        if class_indices is not None:
+            mask = np.isin(self.labels, class_indices)
+            self.images = self.images[mask]
+            self.labels = self.labels[mask]
+            print(f"[ImageNet32Dataset] Filtered to {len(class_indices)} classes: {sorted(class_indices)}")
 
         print(f"[ImageNet32Dataset] Loaded total of {len(self.images)} images.")
 

@@ -45,6 +45,9 @@ def define_flags():
     # Dataset
     # ------------------------------------------------------------------ #
     flags.DEFINE_string("dataset", "cifar10", "Dataset to use: cifar10 | imagenet32.")
+    flags.DEFINE_list("imagenet_classes", [],
+                      "Comma-separated ImageNet class indices (0-999) to train on. "
+                      "Empty = all classes. Example: 281,282,283,284,285 for cat breeds.")
 
     # ------------------------------------------------------------------ #
     # Optimizer / scheduler

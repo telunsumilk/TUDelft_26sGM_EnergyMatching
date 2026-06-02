@@ -138,6 +138,24 @@ python train.py \
   --fid_times=0.75,1.0,1.5,2.0,2.5,3.0,3.5,4.0 \
   --fid_num_gen=50000 \
   --batch_size=64
+
+# ImageNet32 — subset of classes (faster, lower memory)
+# Class indices are 0-based (0–999). Example: cat breeds (281–285).
+# Omit --imagenet_classes to train on all 1000 classes.
+python train.py \
+  --dataset=imagenet32 \
+  --imagenet_classes=281,282,283,284,285 \
+  --lr=6e-4 \
+  --energy_clamp=10000 \
+  --use_flow_weight=False \
+  --phase1_steps=640000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_times=0.75,1.0,1.5,2.0,2.5,3.0,3.5,4.0 \
+  --fid_num_gen=50000 \
+  --batch_size=64
 ```
 
 Results are written to `/workspace/EnergyMatching/results/`.

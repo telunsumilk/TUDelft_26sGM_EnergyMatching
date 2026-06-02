@@ -57,6 +57,7 @@ def get_dataset():
         return get_cifar10_dataset()
     elif FLAGS.dataset == "imagenet32":
         from dataset_imagenet32 import ImageNet32Dataset
+        class_indices = [int(c) for c in FLAGS.imagenet_classes] or None
         return ImageNet32Dataset(
             split="train",
             transform=T.Compose([
@@ -65,6 +66,7 @@ def get_dataset():
                 T.ToTensor(),
                 T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]),
+            class_indices=class_indices,
         )
     raise ValueError(f"Unknown dataset: {FLAGS.dataset!r}")
 
@@ -160,16 +162,8 @@ def cd_step(model, flow_matcher, x_real_flow, x_real_cd, device):
 
     Returns (total_loss, flow_loss, cd_loss, pos_energy, neg_energy).
     """
-    # --- flow part ---
-    x0 = torch.randn_like(x_real_flow)
-    t, xt, ut = flow_matcher.sample_location_and_conditional_flow(x0, x_real_flow)
-    vt = model(t, xt)
-    mse = (vt - ut).square()
-    if FLAGS.use_flow_weight:
-        w = flow_weight(t, cutoff=FLAGS.time_cutoff)
-        f_loss = torch.mean(w * mse.mean(dim=[1, 2, 3]))
-    else:
-        f_loss = mse.mean()
+    # --- flow part (reuses phase 1 logic) ---
+    f_loss = flow_step(model, flow_matcher, x_real_flow)
 
     # --- CD part ---
     t_dummy = torch.ones(x_real_cd.size(0), device=device)
