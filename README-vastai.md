@@ -44,7 +44,7 @@ tmux new -s train
 
 # Download and run the setup script
 curl -fsSL https://raw.githubusercontent.com/telunsumilk/TUDelft_26sGM_EnergyMatching/refs/heads/main/setup.sh \
-  | bash -s -- /root
+  | bash
 ```
 
 Or if you have already cloned locally, sync with rsync instead:
@@ -52,13 +52,13 @@ Or if you have already cloned locally, sync with rsync instead:
 ```bash
 rsync -avz --exclude='.git' --exclude='results/' --exclude='.venv/' \
   /path/to/EnergyMatching/ \
-  -e "ssh -p 12345" root@123.45.67.89:/root/EnergyMatching/
+  -e "ssh -p 12345" root@123.45.67.89:/workspace/EnergyMatching/
 ```
 
 Then on the instance:
 
 ```bash
-bash /root/EnergyMatching/setup.sh /root
+bash /workspace/EnergyMatching/setup.sh
 ```
 
 ---
@@ -72,7 +72,7 @@ ImageNet32 must be uploaded manually:
 # From your local machine — upload the Imagenet32_train folder
 rsync -avz --progress \
   /path/to/Imagenet32_train/ \
-  -e "ssh -p 12345" root@123.45.67.89:/root/EnergyMatching/experiments/genmodel/data/Imagenet32_train/
+  -e "ssh -p 12345" root@123.45.67.89:/workspace/EnergyMatching/experiments/genmodel/data/Imagenet32_train/
 ```
 
 ---
@@ -81,8 +81,8 @@ rsync -avz --progress \
 
 ```bash
 # On the instance, inside the tmux session
-source /root/venv/bin/activate
-cd /root/EnergyMatching/experiments/genmodel
+source /workspace/venv/bin/activate
+cd /workspace/EnergyMatching/experiments/genmodel
 
 # CIFAR-10 (full run)
 python train.py \
@@ -129,7 +129,7 @@ python train.py \
   --batch_size=64
 ```
 
-Results are written to `../../results/` (i.e. `/root/EnergyMatching/results/`).
+Results are written to `../../results/` (i.e. `/workspace/EnergyMatching/results/`).
 
 Detach from tmux with **Ctrl-B D** and re-attach later with `tmux attach -t train`.
 
@@ -139,7 +139,7 @@ Detach from tmux with **Ctrl-B D** and re-attach later with `tmux attach -t trai
 
 ```bash
 # Tail the absl log (filename matches the run timestamp)
-tail -f /root/EnergyMatching/results/genmodel_*/train.INFO
+tail -f /workspace/EnergyMatching/results/genmodel_*/train.INFO
 ```
 
 ---
@@ -153,7 +153,7 @@ instance is destroyed. Download checkpoints and results regularly:
 # From your local machine
 rsync -avz --progress \
   -e "ssh -p 12345" \
-  root@123.45.67.89:/root/EnergyMatching/results/ \
+  root@123.45.67.89:/workspace/EnergyMatching/results/ \
   ./results_vastai/
 ```
 

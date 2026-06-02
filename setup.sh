@@ -2,16 +2,12 @@
 # setup.sh — install dependencies for EnergyMatching on a cloud GPU instance.
 #
 # Usage:
-#   bash setup.sh [WORKDIR]
-#
-# WORKDIR defaults to /workspace (RunPod) — pass /root for vast.ai if preferred.
-#
-#   bash setup.sh /root          # vast.ai
-#   bash setup.sh /workspace     # RunPod (default)
+#   bash setup.sh
 
 set -euo pipefail
 
-WORKDIR="${1:-/workspace}"
+WORKDIR="/workspace"
+mkdir -p "$WORKDIR"
 REPO_DIR="$WORKDIR/EnergyMatching"
 VENV_DIR="$WORKDIR/venv"
 
