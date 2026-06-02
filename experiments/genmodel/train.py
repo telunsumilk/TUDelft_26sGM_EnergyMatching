@@ -241,38 +241,41 @@ def _train_loop(
     log_every = FLAGS.log_every
     last_log_time = time.time()
 
-    for step in range(start_step, start_step + total_steps):
-        optimizer.zero_grad(set_to_none=True)
-        with torch.autocast(device_type=device.type, dtype=amp_dtype,
-                            enabled=(amp_dtype is not None)):
-            loss, log_dict = step_fn(model)
-        if scaler is not None:
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.grad_clip)
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.grad_clip)
-            optimizer.step()
-        scheduler.step()
-        ema(model, ema_model, ema_decay)
+    with torch.backends.cuda.sdp_kernel(
+        enable_math=True, enable_flash=False, enable_mem_efficient=False
+    ):
+        for step in range(start_step, start_step + total_steps):
+            optimizer.zero_grad(set_to_none=True)
+            with torch.autocast(device_type=device.type, dtype=amp_dtype,
+                                enabled=(amp_dtype is not None)):
+                loss, log_dict = step_fn(model)
+            if scaler is not None:
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), FLAGS.grad_clip)
+                optimizer.step()
+            scheduler.step()
+            ema(model, ema_model, ema_decay)
 
-        if step % log_every == 0:
-            now = time.time()
-            elapsed = now - last_log_time
-            sps = log_every / elapsed if elapsed > 1e-9 else 0.0
-            last_log_time = now
-            lr = scheduler.get_last_lr()[0]
-            stats = "  ".join(f"{k}={v:.5f}" for k, v in log_dict.items())
-            logging.info(
-                f"[{phase_tag} step {step}]  {stats}  lr={lr:.6f}  {sps:.2f} it/s"
-            )
+            if step % log_every == 0:
+                now = time.time()
+                elapsed = now - last_log_time
+                sps = log_every / elapsed if elapsed > 1e-9 else 0.0
+                last_log_time = now
+                lr = scheduler.get_last_lr()[0]
+                stats = "  ".join(f"{k}={v:.5f}" for k, v in log_dict.items())
+                logging.info(
+                    f"[{phase_tag} step {step}]  {stats}  lr={lr:.6f}  {sps:.2f} it/s"
+                )
 
-        if FLAGS.save_step > 0 and step % FLAGS.save_step == 0 and step > start_step:
-            _periodic_save(model, ema_model, optimizer, scheduler,
-                           datalooper, step, device, savedir, phase_tag)
+            if FLAGS.save_step > 0 and step % FLAGS.save_step == 0 and step > start_step:
+                _periodic_save(model, ema_model, optimizer, scheduler,
+                               datalooper, step, device, savedir, phase_tag)
 
 
 def _periodic_save(model, ema_model, optimizer, scheduler,
