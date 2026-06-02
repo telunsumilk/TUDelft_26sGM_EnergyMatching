@@ -26,7 +26,7 @@ echo "==> Installing system packages..."
 apt-get update -qq
 apt-get install -y --no-install-recommends \
     git tmux rsync wget curl unzip \
-    libgl1-mesa-glx libglib2.0-0   # needed by some OpenCV/torchvision ops
+    libgl1 libglib2.0-0   # needed by some OpenCV/torchvision ops
 apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------------------------------- #
@@ -34,7 +34,7 @@ apt-get clean && rm -rf /var/lib/apt/lists/*
 # --------------------------------------------------------------------------- #
 if [ ! -d "$REPO_DIR/.git" ]; then
     echo "==> Cloning EnergyMatching..."
-    git clone https://github.com/m1balcerak/EnergyMatching.git "$REPO_DIR"
+    git clone https://github.com/telunsumilk/TUDelft_26sGM_EnergyMatching.git "$REPO_DIR"
 else
     echo "==> Repo already present, pulling latest..."
     git -C "$REPO_DIR" pull --ff-only
