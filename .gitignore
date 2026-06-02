@@ -1,0 +1,56 @@
+# Claude Code
+.claude/
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data
+experiments/genmodel/data/
+experiments/cifar10/data/
+experiments/imagenet/data/
+*.pkl
+*.pickle
+
+# Training outputs
+results/
+experiments/toy2d/checkpoint_2D/
+
+# Checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# Logs
+*.log
+*.INFO
+*.WARNING
+*.ERROR
+
+# Images / grids saved during training
+*.png
+*.jpg
+*.jpeg
+
+# OS
+.DS_Store
+Thumbs.db

@@ -14,3 +14,4 @@ torchsde
 python-Levenshtein
 omegaconf
 torch-fidelity
+scikit-learn
