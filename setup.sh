@@ -19,9 +19,9 @@ echo "==> Venv directory : $VENV_DIR"
 # 1. System packages
 # --------------------------------------------------------------------------- #
 echo "==> Installing system packages..."
-apt-get update -qq
+apt-get update
 apt-get install -y --no-install-recommends \
-    git tmux rsync wget curl unzip \
+    git tmux screen rsync wget curl unzip \
     libgl1 libglib2.0-0   # needed by some OpenCV/torchvision ops
 apt-get clean && rm -rf /var/lib/apt/lists/*
 
