@@ -43,7 +43,7 @@ ssh -p 12345 root@123.45.67.89
 tmux new -s train
 
 # Download and run the setup script
-curl -fsSL https://raw.githubusercontent.com/telunsumilk/TUDelft_26sGM_EnergyMatching/main/setup.sh \
+curl -fsSL https://raw.githubusercontent.com/telunsumilk/TUDelft_26sGM_EnergyMatching/refs/heads/main/setup.sh \
   | bash -s -- /root
 ```
 
