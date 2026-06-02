@@ -42,7 +42,7 @@ checkpoints so you never lose work when a pod is stopped.
 1. Go to **Pods → + Deploy**
 2. Select a GPU (RTX 3090 or better)
 3. Under **Template**, choose a RunPod PyTorch template, e.g.
-   `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
+   `runpod/pytorch:2.6.0-py3.11-cuda12.6.3-devel-ubuntu22.04`
 4. Under **Volume**, attach the Network Volume created above → mount at
    `/workspace`
 5. Enable **SSH** access

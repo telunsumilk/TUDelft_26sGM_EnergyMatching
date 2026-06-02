@@ -24,7 +24,7 @@ Go to **Account → SSH Keys** on the vast.ai console and paste your public key
    - GPU: RTX 3090 or better
    - Disk: ≥ 50 GB (CIFAR-10 ~500 MB; ImageNet32 ~35 GB raw)
    - Image: search for **pytorch** — select an image like
-     `pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime`
+     `pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime`
 2. Click **Rent** and wait for the instance to start.
 3. Copy the SSH command shown in the console — it looks like:
    ```
