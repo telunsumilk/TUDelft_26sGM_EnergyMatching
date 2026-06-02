@@ -34,7 +34,7 @@ apt-get clean && rm -rf /var/lib/apt/lists/*
 # --------------------------------------------------------------------------- #
 if [ ! -d "$REPO_DIR/.git" ]; then
     echo "==> Cloning EnergyMatching..."
-    git clone https://github.com/telunsumilk/TUDelft_26sGM_EnergyMatching.git "$REPO_DIR"
+    git clone git@github.com:telunsumilk/TUDelft_26sGM_EnergyMatching.git "$REPO_DIR"
 else
     echo "==> Repo already present, pulling latest..."
     git -C "$REPO_DIR" pull --ff-only
