@@ -335,3 +335,124 @@ class EBMLPModelWrapper(UNetModelWrapper):
             return self.potential(x, t)
         else:
             return self.velocity(x, t)
+        
+##############################################################################
+# 3) EBM with a single self-attention layer over patches (between MLP and ViT)
+##############################################################################
+class EBAttnModelWrapper(UNetModelWrapper):
+    """
+    Energy-Based Model with a single multi-head self-attention layer over
+    patch tokens, sitting between EBMLPModelWrapper (no spatial reasoning)
+    and EBViTModelWrapper (full Transformer encoder).
+
+    Pipeline:
+        UNet -> PatchEmbed -> Single MHA layer -> mean pool -> Linear -> V(x)
+    """
+
+    def __init__(
+        self,
+        dim=(3, 32, 32),
+        num_channels=128,
+        num_res_blocks=2,
+        channel_mult=[1, 2, 2, 2],
+        attention_resolutions="16",
+        num_heads=4,
+        num_head_channels=64,
+        dropout=0.1,
+        # UNet flags
+        class_cond=False,
+        learn_sigma=False,
+        use_checkpoint=False,
+        use_fp16=False,
+        resblock_updown=False,
+        use_scale_shift_norm=False,
+        use_new_attention_order=False,
+        # Attention-specific
+        patch_size=4,
+        embed_dim=128,
+        attn_nheads=4,
+        include_pos_embed=True,
+        # EBM extras
+        output_scale=1000.0,
+        energy_clamp=None,
+        **kwargs
+    ):
+        super().__init__(
+            dim=dim,
+            num_channels=num_channels,
+            num_res_blocks=num_res_blocks,
+            channel_mult=channel_mult,
+            attention_resolutions=attention_resolutions,
+            num_heads=num_heads,
+            num_head_channels=num_head_channels,
+            dropout=dropout,
+            class_cond=class_cond,
+            learn_sigma=learn_sigma,
+            use_checkpoint=use_checkpoint,
+            use_fp16=use_fp16,
+            resblock_updown=resblock_updown,
+            use_scale_shift_norm=use_scale_shift_norm,
+            use_new_attention_order=use_new_attention_order,
+            **kwargs
+        )
+
+        self.out_channels = dim[0]
+        self.output_scale = output_scale
+        self.energy_clamp = energy_clamp
+
+        # 1) PatchEmbed — same as ViT variant
+        self.patch_embed = PatchEmbed(
+            in_channels=self.out_channels,
+            patch_size=patch_size,
+            embed_dim=embed_dim,
+            image_size=dim[1:],
+            include_pos_embed=include_pos_embed
+        )
+
+        # 2) Single self-attention layer (no feedforward, no layernorm stack)
+        self.attn = nn.MultiheadAttention(
+            embed_dim=embed_dim,
+            num_heads=attn_nheads,
+            dropout=dropout,
+            batch_first=True
+        )
+        self.attn_norm = nn.LayerNorm(embed_dim)
+
+        # 3) Linear -> scalar
+        self.final_linear = nn.Linear(embed_dim, 1)
+
+    def potential(self, x, t):
+        t_dummy = dummy_time(x, value=0.5)
+        # UNet forward: (B, C, H, W)
+        unet_out = super().forward(t_dummy, x)
+        # Patch embed: (B, N, embed_dim)
+        tokens = self.patch_embed(unet_out)
+        # Single self-attention with residual + layernorm
+        attn_out, _ = self.attn(tokens, tokens, tokens)
+        tokens = self.attn_norm(tokens + attn_out)
+        # Mean pool: (B, embed_dim)
+        pooled = tokens.mean(dim=1)
+        # Scalar: (B,)
+        V = self.final_linear(pooled).view(-1)
+        V = V * self.output_scale
+        if self.energy_clamp is not None:
+            V = soft_clamp(V, self.energy_clamp)
+        return V
+
+    def velocity(self, x, t):
+        with torch.enable_grad():
+            x = x.clone().detach().requires_grad_(True)
+            V = self.potential(x, t)
+            dVdx = torch.autograd.grad(
+                outputs=V,
+                inputs=x,
+                grad_outputs=torch.ones_like(V),
+                create_graph=self.training
+            )[0]
+            return -dVdx
+
+    def forward(self, t, x, return_potential=False, *args, **kwargs):
+        if return_potential:
+            return self.potential(x, t)
+        else:
+            return self.velocity(x, t)
