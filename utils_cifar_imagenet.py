@@ -324,9 +324,8 @@ def generate_samples_sde(model, savedir, step, net_="normal"):
     We'll integrate from t=0..1 with dt=0.01, then save the final images.
     """
     model.eval()
-    n = min(FLAGS.batch_size, 64)
     with torch.no_grad():
-        init = torch.randn(n, 3, 32, 32, device=device)
+        init = torch.randn(FLAGS.batch_size, 3, 32, 32, device=device)
         traj = sde_euler_maruyama(model, init, t0=0.0, t1=1.0, dt=0.01)
         final = traj[-1].clamp(-1, 1)
         final = final / 2.0 + 0.5
