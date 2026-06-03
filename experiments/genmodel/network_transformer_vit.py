@@ -207,7 +207,7 @@ class EBViTModelWrapper(UNetModelWrapper):
                 outputs=V,
                 inputs=x,
                 grad_outputs=torch.ones_like(V),
-                create_graph=True
+                create_graph=self.training
             )[0]
             return -dVdx
 
@@ -321,7 +321,7 @@ class EBMLPModelWrapper(UNetModelWrapper):
                 outputs=V,
                 inputs=x,
                 grad_outputs=torch.ones_like(V),
-                create_graph=True
+                create_graph=self.training
             )[0]
             return -dVdx
 
