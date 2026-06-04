@@ -43,7 +43,7 @@ from utils_cifar_imagenet import (
     save_pos_neg_grids,
     warmup_lr,
 )
-from network_transformer_vit import EBViTModelWrapper
+from network_transformer_vit import EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper
 
 
 # =========================================================================== #
@@ -77,7 +77,7 @@ def get_dataset():
 
 def build_model(device):
     ch_mult = config.parse_channel_mult(FLAGS)
-    model = EBViTModelWrapper(
+    common = dict(
         dim=(3, 32, 32),
         num_channels=FLAGS.num_channels,
         num_res_blocks=FLAGS.num_res_blocks,
@@ -88,11 +88,25 @@ def build_model(device):
         dropout=FLAGS.dropout,
         output_scale=FLAGS.output_scale,
         energy_clamp=FLAGS.energy_clamp,
-        patch_size=4,
-        embed_dim=FLAGS.embed_dim,
-        transformer_nheads=FLAGS.transformer_nheads,
-        transformer_nlayers=FLAGS.transformer_nlayers,
-    ).to(device)
+    )
+    if FLAGS.model_type == "vit":
+        model = EBViTModelWrapper(
+            **common,
+            patch_size=4,
+            embed_dim=FLAGS.embed_dim,
+            transformer_nheads=FLAGS.transformer_nheads,
+            transformer_nlayers=FLAGS.transformer_nlayers,
+        )
+    elif FLAGS.model_type == "attn":
+        model = EBAttnModelWrapper(
+            **common,
+            patch_size=4,
+            embed_dim=FLAGS.embed_dim,
+            attn_nheads=FLAGS.transformer_nheads,
+        )
+    else:  # mlp
+        model = EBMLPModelWrapper(**common)
+    model = model.to(device)
     ema_model = copy.deepcopy(model)
     return model, ema_model
 

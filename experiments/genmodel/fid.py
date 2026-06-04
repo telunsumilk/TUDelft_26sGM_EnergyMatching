@@ -340,11 +340,11 @@ if __name__ == "__main__":
         if not FLAGS.resume_ckpt or not os.path.exists(FLAGS.resume_ckpt):
             raise ValueError(f"--resume_ckpt not found: {FLAGS.resume_ckpt!r}")
 
-        from network_transformer_vit import EBViTModelWrapper
+        from network_transformer_vit import EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper
         from config import parse_channel_mult
         ch_mult = parse_channel_mult(FLAGS)
 
-        model = EBViTModelWrapper(
+        common = dict(
             dim=(3, 32, 32),
             num_channels=FLAGS.num_channels,
             num_res_blocks=FLAGS.num_res_blocks,
@@ -355,11 +355,25 @@ if __name__ == "__main__":
             dropout=FLAGS.dropout,
             output_scale=FLAGS.output_scale,
             energy_clamp=FLAGS.energy_clamp,
-            patch_size=4,
-            embed_dim=FLAGS.embed_dim,
-            transformer_nheads=FLAGS.transformer_nheads,
-            transformer_nlayers=FLAGS.transformer_nlayers,
-        ).to(device)
+        )
+        if FLAGS.model_type == "vit":
+            model = EBViTModelWrapper(
+                **common,
+                patch_size=4,
+                embed_dim=FLAGS.embed_dim,
+                transformer_nheads=FLAGS.transformer_nheads,
+                transformer_nlayers=FLAGS.transformer_nlayers,
+            )
+        elif FLAGS.model_type == "attn":
+            model = EBAttnModelWrapper(
+                **common,
+                patch_size=4,
+                embed_dim=FLAGS.embed_dim,
+                attn_nheads=FLAGS.transformer_nheads,
+            )
+        else:  # mlp
+            model = EBMLPModelWrapper(**common)
+        model = model.to(device)
 
         ckpt = torch.load(FLAGS.resume_ckpt, map_location=device)
         key = "ema_model" if FLAGS.use_ema else "net_model"
