@@ -253,19 +253,25 @@ def compute_fid(model, flags, device, savedir):
 
     # -- real images --------------------------------------------------------
     logging.info("FID: updating with real images...")
+    n_real = 0
     for imgs, _ in tqdm(_real_loader(flags), desc="real"):
         imgs = imgs.to(device)
         # imgs from eval dataset are in [0, 1] (ToTensor only, no normalize)
         imgs_u8 = (imgs * 255).clamp(0, 255).to(torch.uint8)
         for t in times:
             fid_meters[t].update(imgs_u8, real=True)
+        n_real += imgs.size(0)
+
+    n_fake = min(flags.fid_num_gen, n_real)
+    if n_fake < flags.fid_num_gen:
+        logging.info(f"FID: capping fake images at {n_fake} to match real dataset size.")
 
     # -- fake images --------------------------------------------------------
-    logging.info(f"FID: generating {flags.fid_num_gen} samples across {len(times)} times...")
+    logging.info(f"FID: generating {n_fake} samples across {len(times)} times...")
     n_generated = 0
-    with tqdm(total=flags.fid_num_gen, desc="fake") as pbar:
-        while n_generated < flags.fid_num_gen:
-            bsz = min(flags.batch_size, flags.fid_num_gen - n_generated)
+    with tqdm(total=n_fake, desc="fake") as pbar:
+        while n_generated < n_fake:
+            bsz = min(flags.batch_size, n_fake - n_generated)
             x = torch.randn(bsz, 3, 32, 32, device=device)
             t_prev = 0.0
             for t_end in times:
