@@ -80,7 +80,7 @@ def _real_loader(flags):
     else:
         raise ValueError(f"Unknown dataset: {flags.dataset!r}")
 
-    return DataLoader(dataset, batch_size=flags.batch_size,
+    return DataLoader(dataset, batch_size=flags.fid_batch_size,
                       num_workers=flags.num_workers, shuffle=False, drop_last=False)
 
 
@@ -275,7 +275,7 @@ def compute_fid(model, flags, device, savedir):
     n_generated = 0
     with tqdm(total=n_fake, desc="fake") as pbar:
         while n_generated < n_fake:
-            bsz = min(flags.batch_size, n_fake - n_generated)
+            bsz = min(flags.fid_batch_size, n_fake - n_generated)
             x = torch.randn(bsz, 3, 32, 32, device=device)
             t_prev = 0.0
             for t_end in times:
