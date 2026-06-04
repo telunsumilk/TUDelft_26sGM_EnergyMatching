@@ -252,7 +252,7 @@ def compute_fid(model, flags, device, savedir):
     fid_meters = {t: FrechetInceptionDistance(feature=2048).to(device) for t in times}
 
     # -- real images --------------------------------------------------------
-    logging.info("FID: updating with real images...")
+    tqdm.write("FID: updating with real images...")
     n_real = 0
     for imgs, _ in tqdm(_real_loader(flags), desc="real"):
         imgs = imgs.to(device)
@@ -264,10 +264,10 @@ def compute_fid(model, flags, device, savedir):
 
     n_fake = min(flags.fid_num_gen, n_real)
     if n_fake < flags.fid_num_gen:
-        logging.info(f"FID: capping fake images at {n_fake} to match real dataset size.")
+        tqdm.write(f"FID: capping fake images at {n_fake} to match real dataset size ({n_real}).")
 
     # -- fake images --------------------------------------------------------
-    logging.info(f"FID: generating {n_fake} samples across {len(times)} times...")
+    tqdm.write(f"FID: generating {n_fake} samples across {len(times)} times...")
     n_generated = 0
     with tqdm(total=n_fake, desc="fake") as pbar:
         while n_generated < n_fake:
@@ -288,31 +288,31 @@ def compute_fid(model, flags, device, savedir):
     for t in times:
         score = fid_meters[t].compute().item()
         results[t] = score
-        logging.info(f"  FID @ t={t:.3f} = {score:.4f}")
+        tqdm.write(f"  FID @ t={t:.3f} = {score:.4f}")
 
     # save summary
     summary_path = os.path.join(savedir, "fid_results.txt")
     with open(summary_path, "w") as f:
         for t, score in results.items():
             f.write(f"{t:.4f}\t{score:.6f}\n")
-    logging.info(f"FID results written to {summary_path}")
+    tqdm.write(f"FID results written to {summary_path}")
 
     # -- trajectory visualisations (toy2d analogs) -------------------------
-    logging.info("FID: generating trajectory visualisations...")
+    tqdm.write("FID: generating trajectory visualisations...")
 
     # Image grid: 8 samples (rows) × time steps (columns)
     x_grid = torch.randn(8, 3, 32, 32, device=device)
     frames_grid = simulate_image_trajectory(model, x_grid, times, dt=flags.dt_gibbs)
     grid_path = os.path.join(savedir, "sde_trajectory_grid.png")
     plot_image_trajectories(frames_grid, n_samples=8, savepath=grid_path)
-    logging.info(f"Image grid saved to {grid_path}")
+    tqdm.write(f"Image grid saved to {grid_path}")
 
     # PCA scatter: 256 samples give PCA enough points for meaningful structure
     x_pca = torch.randn(256, 3, 32, 32, device=device)
     frames_pca = simulate_image_trajectory(model, x_pca, times, dt=flags.dt_gibbs)
     pca_path = os.path.join(savedir, "sde_trajectory_pca.png")
     plot_pca_trajectories(frames_pca, n_highlight=10, savepath=pca_path)
-    logging.info(f"PCA trajectory plot saved to {pca_path}")
+    tqdm.write(f"PCA trajectory plot saved to {pca_path}")
 
     model.train()
     return results
