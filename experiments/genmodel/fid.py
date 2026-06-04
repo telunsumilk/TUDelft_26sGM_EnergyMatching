@@ -254,13 +254,17 @@ def compute_fid(model, flags, device, savedir):
     # -- real images --------------------------------------------------------
     logging.info("FID: updating with real images...")
     n_real = 0
-    for imgs, _ in tqdm(_real_loader(flags), desc="real"):
-        imgs = imgs.to(device)
-        # imgs from eval dataset are in [0, 1] (ToTensor only, no normalize)
-        imgs_u8 = (imgs * 255).clamp(0, 255).to(torch.uint8)
-        for t in times:
-            fid_meters[t].update(imgs_u8, real=True)
-        n_real += imgs.size(0)
+    real_loader = _real_loader(flags)
+    with tqdm(total=len(real_loader.dataset), unit="img", desc="real") as pbar:
+        for imgs, _ in real_loader:
+            imgs = imgs.to(device)
+            # imgs from eval dataset are in [0, 1] (ToTensor only, no normalize)
+            imgs_u8 = (imgs * 255).clamp(0, 255).to(torch.uint8)
+            for t in times:
+                fid_meters[t].update(imgs_u8, real=True)
+            bsz = imgs.size(0)
+            n_real += bsz
+            pbar.update(bsz)
 
     n_fake = min(flags.fid_num_gen, n_real)
     if n_fake < flags.fid_num_gen:
