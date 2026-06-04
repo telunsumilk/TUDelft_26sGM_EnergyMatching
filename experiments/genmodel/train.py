@@ -476,6 +476,8 @@ def main(argv):
         if FLAGS.fid_num_gen > 0:
             from fid import compute_fid
             logging.info("=== FID evaluation on final EMA model ===")
+            del optimizer, scheduler, model
+            torch.cuda.empty_cache()
             compute_fid(ema_model, FLAGS, device, savedir)
         else:
             logging.info("FID skipped (--fid_num_gen=0).")

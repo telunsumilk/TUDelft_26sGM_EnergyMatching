@@ -58,9 +58,9 @@ def define_flags():
     flags.DEFINE_float("grad_clip", 1.0, "Gradient norm clipping threshold.")
     flags.DEFINE_integer("warmup", 10000, "Linear LR warmup steps.")
     flags.DEFINE_integer("batch_size", 128, "Per-GPU batch size.")
-    flags.DEFINE_integer("fid_batch_size", 1024,
+    flags.DEFINE_integer("fid_batch_size", 256,
                          "Batch size for FID (real loader + fake generation). "
-                         "Can be larger than batch_size as no gradients are needed.")
+                         "UNet skip connections scale with batch size — keep ≤256 on 24 GB GPUs.")
     flags.DEFINE_integer("num_workers", 4, "DataLoader worker processes.")
 
     # ------------------------------------------------------------------ #
