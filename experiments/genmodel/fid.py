@@ -73,7 +73,8 @@ def _real_loader(flags):
 
     if flags.dataset == "cifar10":
         from dataset_cifar import get_cifar10_eval_dataset
-        dataset = get_cifar10_eval_dataset()
+        class_indices = [int(c) for c in flags.cifar_classes] or None
+        dataset = get_cifar10_eval_dataset(class_indices=class_indices)
     elif flags.dataset == "imagenet32":
         from dataset_imagenet32 import ImageNet32Dataset
         dataset = ImageNet32Dataset(split="train", transform=T.ToTensor())

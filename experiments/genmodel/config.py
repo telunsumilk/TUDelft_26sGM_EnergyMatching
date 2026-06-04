@@ -47,6 +47,12 @@ def define_flags():
     # Dataset
     # ------------------------------------------------------------------ #
     flags.DEFINE_string("dataset", "cifar10", "Dataset to use: cifar10 | imagenet32.")
+    flags.DEFINE_list("cifar_classes", [],
+                      "Comma-separated CIFAR-10 class indices (0-9) to train on. "
+                      "Empty = all 10 classes. "
+                      "0=airplane,1=automobile,2=bird,3=cat,4=deer,"
+                      "5=dog,6=frog,7=horse,8=ship,9=truck. "
+                      "Example: 3,4,5,7 for 4-legged animals.")
     flags.DEFINE_list("imagenet_classes", [],
                       "Comma-separated ImageNet class indices (0-999) to train on. "
                       "Empty = all classes. Example: 281,282,283,284,285 for cat breeds.")

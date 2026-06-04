@@ -54,7 +54,8 @@ def get_dataset():
     import torchvision.transforms as T
     if FLAGS.dataset == "cifar10":
         from dataset_cifar import get_cifar10_dataset
-        return get_cifar10_dataset()
+        class_indices = [int(c) for c in FLAGS.cifar_classes] or None
+        return get_cifar10_dataset(class_indices=class_indices)
     elif FLAGS.dataset == "imagenet32":
         from dataset_imagenet32 import ImageNet32Dataset
         class_indices = [int(c) for c in FLAGS.imagenet_classes] or None
