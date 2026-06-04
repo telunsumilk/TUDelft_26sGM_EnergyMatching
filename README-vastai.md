@@ -93,6 +93,7 @@ python train.py \
   --lambda_cd=1e-3 \
   --epsilon_max=0.01 \
   --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
   --batch_size=128
 
 # ImageNet32 (key overrides)
@@ -106,7 +107,7 @@ python train.py \
   --n_gibbs=200 \
   --lambda_cd=1e-3 \
   --epsilon_max=0.01 \
-  --fid_times=0.75,1.0,1.5,2.0,2.5,3.0,3.5,4.0 \
+  --fid_times=0.75,1.5,2.5,3.5,4.0 \
   --fid_num_gen=50000 \
   --batch_size=64
 
@@ -124,9 +125,26 @@ python train.py \
   --n_gibbs=200 \
   --lambda_cd=1e-3 \
   --epsilon_max=0.01 \
-  --fid_times=0.75,1.0,1.5,2.0,2.5,3.0,3.5,4.0 \
+  --fid_times=0.75,1.5,2.5,3.5,4.0 \
   --fid_num_gen=50000 \
   --batch_size=64
+
+# Model architecture — default is ViT head; two lighter alternatives are available:
+#   --model_type=vit   Full Transformer head (default)
+#   --model_type=attn  Single self-attention layer (lighter)
+#   --model_type=mlp   Global-pool MLP head (lightest)
+# Example:
+python train.py \
+  --dataset=cifar10 \
+  --model_type=attn \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
 ```
 
 Results are written to `../../results/` (i.e. `/workspace/EnergyMatching/results/`).
