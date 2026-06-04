@@ -125,6 +125,22 @@ python train.py \
   --fid_times=1.0,2.0,3.0,4.0,5.0 \
   --batch_size=128
 
+# CIFAR-10 — subset of classes (faster, lower memory)
+# Class indices: 0=airplane,1=automobile,2=bird,3=cat,4=deer,
+#                5=dog,6=frog,7=horse,8=ship,9=truck
+# Omit --cifar_classes to train on all 10 classes.
+python train.py \
+  --dataset=cifar10 \
+  --cifar_classes=3,4,5,7 \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=20000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
+
 # ImageNet32 (key overrides)
 python train.py \
   --dataset=imagenet32 \
