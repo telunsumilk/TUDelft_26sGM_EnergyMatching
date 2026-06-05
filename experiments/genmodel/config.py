@@ -16,8 +16,9 @@ def define_flags():
     flags.DEFINE_string("model", "genmodel", "Model name prefix for timestamped output dir.")
     flags.DEFINE_string("output_dir", "../../results/", "Root directory for run outputs.")
     flags.DEFINE_string("my_log_dir", "", "Override directory for absl log files.")
-    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp"],
-                      "Head architecture: vit (full Transformer), attn (single MHA layer), mlp (global-pool MLP).")
+    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp", "hopfield", "cnn"],
+                      "Head architecture: vit (full Transformer), attn (single MHA layer), mlp (global-pool MLP), "
+                      "hopfield (Hopfield energy head on UNet backbone), cnn (lightweight encoder, no UNet).")
 
     # ------------------------------------------------------------------ #
     # UNet architecture
@@ -42,6 +43,12 @@ def define_flags():
     flags.DEFINE_integer("embed_dim", 384, "Token embedding dimension for the ViT head.")
     flags.DEFINE_integer("transformer_nheads", 4, "Attention heads in ViT encoder.")
     flags.DEFINE_integer("transformer_nlayers", 8, "Transformer encoder depth.")
+
+    # ------------------------------------------------------------------ #
+    # Hopfield head (model_type=hopfield only)
+    # ------------------------------------------------------------------ #
+    flags.DEFINE_integer("hopfield_memories", 512, "Number of Hopfield memory prototypes.")
+    flags.DEFINE_float("hopfield_beta", 8.0, "Hopfield inverse temperature β.")
 
     # ------------------------------------------------------------------ #
     # Dataset

@@ -456,3 +456,184 @@ class EBAttnModelWrapper(UNetModelWrapper):
             return self.potential(x, t)
         else:
             return self.velocity(x, t)
+
+
+##############################################################################
+# 4) Modern Hopfield energy head (UNet backbone + Hopfield scalar)
+##############################################################################
+class EBHopfieldModelWrapper(UNetModelWrapper):
+    """
+    Modern Hopfield energy head on top of the UNet backbone.
+
+    V(x) = -(1/β) * logsumexp(β · q(x) · Ξᵀ)
+
+    The gradient -∂V/∂x is a softmax-weighted average of the memory prototypes
+    Ξ (via the chain rule through q), so it naturally points toward the nearest
+    stored pattern.  Multi-modal by construction; no convexity constraint.
+
+    Reference: Ramsauer et al. (2020) "Hopfield Networks is All You Need".
+    """
+
+    def __init__(
+        self,
+        dim=(3, 32, 32),
+        num_channels=128,
+        num_res_blocks=2,
+        channel_mult=[1, 2, 2, 2],
+        attention_resolutions="16",
+        num_heads=4,
+        num_head_channels=64,
+        dropout=0.1,
+        class_cond=False,
+        learn_sigma=False,
+        use_checkpoint=False,
+        use_fp16=False,
+        resblock_updown=False,
+        use_scale_shift_norm=False,
+        use_new_attention_order=False,
+        n_memories=512,
+        embed_dim=128,
+        hopfield_beta=8.0,
+        output_scale=1000.0,
+        energy_clamp=None,
+        **kwargs
+    ):
+        super().__init__(
+            dim=dim,
+            num_channels=num_channels,
+            num_res_blocks=num_res_blocks,
+            channel_mult=channel_mult,
+            attention_resolutions=attention_resolutions,
+            num_heads=num_heads,
+            num_head_channels=num_head_channels,
+            dropout=dropout,
+            class_cond=class_cond,
+            learn_sigma=learn_sigma,
+            use_checkpoint=use_checkpoint,
+            use_fp16=use_fp16,
+            resblock_updown=resblock_updown,
+            use_scale_shift_norm=use_scale_shift_norm,
+            use_new_attention_order=use_new_attention_order,
+            **kwargs
+        )
+        self.out_channels = dim[0]
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.query_proj = nn.Linear(self.out_channels, embed_dim)
+        self.memories = nn.Parameter(torch.randn(n_memories, embed_dim) * 0.02)
+        self.hopfield_beta = hopfield_beta
+        self.output_scale = output_scale
+        self.energy_clamp = energy_clamp
+
+    def potential(self, x, t):
+        t_dummy = dummy_time(x, value=0.5)
+        unet_out = super().forward(t_dummy, x)                # (B, C, H, W)
+        pooled = self.pool(unet_out).squeeze(-1).squeeze(-1)  # (B, C)
+        q = self.query_proj(pooled)                           # (B, embed_dim)
+        logits = self.hopfield_beta * (q @ self.memories.T)   # (B, n_memories)
+        V = -torch.logsumexp(logits, dim=-1) / self.hopfield_beta  # (B,)
+        V = V * self.output_scale
+        if self.energy_clamp is not None:
+            V = soft_clamp(V, self.energy_clamp)
+        return V
+
+    def velocity(self, x, t):
+        with torch.enable_grad():
+            x = x.clone().detach().requires_grad_(True)
+            V = self.potential(x, t)
+            dVdx = torch.autograd.grad(
+                outputs=V,
+                inputs=x,
+                grad_outputs=torch.ones_like(V),
+                create_graph=self.training
+            )[0]
+            return -dVdx
+
+    def forward(self, t, x, return_potential=False, *args, **kwargs):
+        if return_potential:
+            return self.potential(x, t)
+        return self.velocity(x, t)
+
+
+##############################################################################
+# 5) Lightweight CNN encoder — no UNet backbone
+##############################################################################
+class _ResBlock(nn.Module):
+    """Two-conv residual block with GroupNorm + SiLU activations."""
+    def __init__(self, channels):
+        super().__init__()
+        g = min(8, channels)
+        self.net = nn.Sequential(
+            nn.GroupNorm(g, channels), nn.SiLU(),
+            nn.Conv2d(channels, channels, 3, padding=1),
+            nn.GroupNorm(g, channels), nn.SiLU(),
+            nn.Conv2d(channels, channels, 3, padding=1),
+        )
+
+    def forward(self, x):
+        return x + self.net(x)
+
+
+class EBSimpleEncoderWrapper(nn.Module):
+    """
+    Lightweight CNN encoder for scalar energy — no UNet decoder or skip connections.
+
+    The UNet backbone was designed for pixel-level diffusion output; for a scalar
+    energy the decoder and skip connections are wasted capacity.  This model uses
+    a pure encoder (stem → strided ResBlocks → global pool → 2-layer MLP → V(x)),
+    which is ~4–8× fewer parameters and faster to backprop through.
+
+    Pipeline:
+        Conv stem → [ResBlock → strided Conv] × N → ResBlock → AdaptiveAvgPool
+        → Flatten → Linear → SiLU → Linear → scalar V(x)
+    """
+
+    def __init__(
+        self,
+        dim=(3, 32, 32),
+        channels=(64, 128, 256, 512),
+        output_scale=1000.0,
+        energy_clamp=None,
+        **kwargs
+    ):
+        super().__init__()
+        C_in = dim[0]
+        layers = [nn.Conv2d(C_in, channels[0], 3, padding=1)]
+        for i in range(len(channels) - 1):
+            layers += [
+                _ResBlock(channels[i]),
+                nn.Conv2d(channels[i], channels[i + 1], 3, stride=2, padding=1),
+            ]
+        layers.append(_ResBlock(channels[-1]))
+        self.encoder = nn.Sequential(*layers)
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.mlp = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(channels[-1], channels[-1]),
+            nn.SiLU(),
+            nn.Linear(channels[-1], 1),
+        )
+        self.output_scale = output_scale
+        self.energy_clamp = energy_clamp
+
+    def potential(self, x, t):
+        V = self.mlp(self.pool(self.encoder(x))).view(-1) * self.output_scale
+        if self.energy_clamp is not None:
+            V = soft_clamp(V, self.energy_clamp)
+        return V
+
+    def velocity(self, x, t):
+        with torch.enable_grad():
+            x = x.clone().detach().requires_grad_(True)
+            V = self.potential(x, t)
+            dVdx = torch.autograd.grad(
+                outputs=V,
+                inputs=x,
+                grad_outputs=torch.ones_like(V),
+                create_graph=self.training
+            )[0]
+            return -dVdx
+
+    def forward(self, t, x, return_potential=False, *args, **kwargs):
+        if return_potential:
+            return self.potential(x, t)
+        return self.velocity(x, t)

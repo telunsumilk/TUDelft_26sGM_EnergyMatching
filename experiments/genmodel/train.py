@@ -43,7 +43,10 @@ from utils_cifar_imagenet import (
     save_pos_neg_grids,
     warmup_lr,
 )
-from network_transformer_vit import EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper
+from network_transformer_vit import (
+    EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper,
+    EBHopfieldModelWrapper, EBSimpleEncoderWrapper,
+)
 
 
 # =========================================================================== #
@@ -104,6 +107,19 @@ def build_model(device):
             patch_size=4,
             embed_dim=FLAGS.embed_dim,
             attn_nheads=FLAGS.transformer_nheads,
+        )
+    elif FLAGS.model_type == "hopfield":
+        model = EBHopfieldModelWrapper(
+            **common,
+            n_memories=FLAGS.hopfield_memories,
+            embed_dim=FLAGS.embed_dim,
+            hopfield_beta=FLAGS.hopfield_beta,
+        )
+    elif FLAGS.model_type == "cnn":
+        model = EBSimpleEncoderWrapper(
+            dim=common["dim"],
+            output_scale=common["output_scale"],
+            energy_clamp=common["energy_clamp"],
         )
     else:  # mlp
         model = EBMLPModelWrapper(**common)
