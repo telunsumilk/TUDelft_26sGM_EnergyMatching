@@ -579,18 +579,24 @@ class EBSimpleEncoderWrapper(nn.Module):
 
     The UNet backbone was designed for pixel-level diffusion output; for a scalar
     energy the decoder and skip connections are wasted capacity.  This model uses
-    a pure encoder (stem → strided ResBlocks → global pool → 2-layer MLP → V(x)),
-    which is ~4–8× fewer parameters and faster to backprop through.
+    a shallow encoder (stem → strided ResBlocks → global pool) plus a direct
+    input skip connection into the energy head, then a 2-layer MLP → scalar V(x).
+
+    The direct input skip (global-pooled raw pixels concatenated to encoder features)
+    is critical: it gives ∂V/∂x a first-order path that cannot vanish through the
+    encoder, preventing the energy collapse (V(x) = constant) that occurs when
+    second-order gradients vanish through a deep CNN during flow-matching Phase 1.
 
     Pipeline:
         Conv stem → [ResBlock → strided Conv] × N → ResBlock → AdaptiveAvgPool
-        → Flatten → Linear → SiLU → Linear → scalar V(x)
+        ↘  raw x → AdaptiveAvgPool (input skip)
+        → cat([encoder_features, input_skip]) → Linear → SiLU → Linear → V(x)
     """
 
     def __init__(
         self,
         dim=(3, 32, 32),
-        channels=(64, 128, 256, 512),
+        channels=(64, 128, 256),
         output_scale=1000.0,
         energy_clamp=None,
         **kwargs
@@ -606,17 +612,23 @@ class EBSimpleEncoderWrapper(nn.Module):
         layers.append(_ResBlock(channels[-1]))
         self.encoder = nn.Sequential(*layers)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        # direct input skip: pools raw pixels to (B, C_in) — guarantees a
+        # first-order gradient path so ∂V/∂x cannot fully vanish
+        self.input_pool = nn.AdaptiveAvgPool2d((1, 1))
+        mlp_in = channels[-1] + C_in
         self.mlp = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(channels[-1], channels[-1]),
+            nn.Linear(mlp_in, mlp_in),
             nn.SiLU(),
-            nn.Linear(channels[-1], 1),
+            nn.Linear(mlp_in, 1),
         )
         self.output_scale = output_scale
         self.energy_clamp = energy_clamp
 
     def potential(self, x, t):
-        V = self.mlp(self.pool(self.encoder(x))).view(-1) * self.output_scale
+        enc = self.pool(self.encoder(x)).squeeze(-1).squeeze(-1)      # (B, C_last)
+        skip = self.input_pool(x).squeeze(-1).squeeze(-1)             # (B, C_in)
+        V = self.mlp(torch.cat([enc, skip], dim=-1)).view(-1) * self.output_scale
         if self.energy_clamp is not None:
             V = soft_clamp(V, self.energy_clamp)
         return V
