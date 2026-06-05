@@ -106,6 +106,50 @@ def simulate_image_trajectory(model, x_init, times, dt=0.01):
     return frames
 
 
+def simulate_image_trajectory_dense(model, x_init, t_end, dt=0.01, record_every=10):
+    """
+    Run the Heun SDE from t=0 to t_end, recording a frame every `record_every`
+    integration steps. Returns list of (time, images) tuples.
+
+    Uses sparse output times so torchsde only materialises one frame per
+    record_every steps — memory stays bounded (~150 MB for 256 samples at 32x32).
+    """
+    orig_shape = x_init.shape
+    B = x_init.size(0)
+    x_flat = x_init.view(B, -1)
+
+    class _SDE(torchsde.SDEStratonovich):
+        def __init__(self, net):
+            super().__init__(noise_type="diagonal")
+            self.net = net
+
+        def f(self, t, y):
+            y_img = y.view(*orig_shape)
+            t_batch = t.expand(B).to(y.device)
+            return self.net(t_batch, y_img).view(B, -1)
+
+        def g(self, t, y):
+            e_val = plot_epsilon(float(t))
+            if e_val <= 0:
+                return torch.zeros_like(y)
+            scale = torch.sqrt(torch.tensor(2.0 * e_val, device=y.device, dtype=y.dtype))
+            return scale.expand_as(y)
+
+    sde = _SDE(model)
+    record_dt = dt * record_every
+    ts = torch.arange(0.0, t_end + 1e-9, record_dt, device=x_init.device)
+    if float(ts[-1]) < t_end - 1e-6:
+        ts = torch.cat([ts, ts.new_tensor([t_end])])
+
+    with torch.no_grad():
+        x_sol = torchsde.sdeint(sde, x_flat, ts, method="heun", dt=dt)
+
+    return [
+        (float(ts[i]), x_sol[i].view(*orig_shape).clamp(-1.0, 1.0).cpu())
+        for i in range(len(ts))
+    ]
+
+
 def plot_pca_trajectories(frames, n_highlight=10, savepath=None):
     """
     PCA projection of the SDE trajectory — direct image analog of
@@ -312,12 +356,23 @@ def compute_fid(model, flags, device, savedir):
     plot_image_trajectories(frames_grid, n_samples=8, savepath=grid_path)
     logging.info(f"Image grid saved to {grid_path}")
 
-    # PCA scatter: 256 samples give PCA enough points for meaningful structure
+    # PCA scatter: 256 samples, dense frames (every 10 steps) for smooth trajectory lines
+    n_highlight = 15
     x_pca = torch.randn(256, 3, 32, 32, device=device)
-    frames_pca = simulate_image_trajectory(model, x_pca, times, dt=flags.dt_gibbs)
+    frames_pca = simulate_image_trajectory_dense(
+        model, x_pca, times[-1], dt=flags.dt_gibbs, record_every=10
+    )
     pca_path = os.path.join(savedir, "sde_trajectory_pca.png")
-    plot_pca_trajectories(frames_pca, n_highlight=10, savepath=pca_path)
+    plot_pca_trajectories(frames_pca, n_highlight=n_highlight, savepath=pca_path)
     logging.info(f"PCA trajectory plot saved to {pca_path}")
+
+    # Companion image grid: the same n_highlight samples shown as actual images.
+    # Subsample the dense frames to ~10 columns so the grid stays readable.
+    stride = max(1, len(frames_pca) // 10)
+    frames_pca_grid = [(t, imgs[:n_highlight]) for t, imgs in frames_pca[::stride]]
+    pca_grid_path = os.path.join(savedir, "sde_trajectory_pca_grid.png")
+    plot_image_trajectories(frames_pca_grid, n_samples=n_highlight, savepath=pca_grid_path)
+    logging.info(f"PCA companion grid saved to {pca_grid_path}")
 
     model.train()
     return results
