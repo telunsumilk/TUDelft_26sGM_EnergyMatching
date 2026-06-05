@@ -145,14 +145,45 @@ python train.py \
   --fid_num_gen=50000 \
   --batch_size=64
 
-# Model architecture — default is ViT head; two lighter alternatives are available:
-#   --model_type=vit   Full Transformer head (default)
-#   --model_type=attn  Single self-attention layer (lighter)
-#   --model_type=mlp   Global-pool MLP head (lightest)
-# Example:
+# Model architecture — five heads are available via --model_type:
+#   vit       Full Transformer head (default)
+#   attn      Single self-attention layer (lighter)
+#   mlp       Global-pool MLP head (lightest UNet-backed option)
+#   hopfield  Modern Hopfield energy head on UNet backbone;
+#             energy wells form at learned prototypes (--hopfield_memories,
+#             --hopfield_beta control the number and sharpness of wells)
+#   cnn       Lightweight pure encoder — no UNet decoder or skip connections;
+#             ~4-8× fewer parameters, faster to train
+# Examples:
 python train.py \
   --dataset=cifar10 \
   --model_type=attn \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
+
+python train.py \
+  --dataset=cifar10 \
+  --model_type=hopfield \
+  --hopfield_memories=512 \
+  --hopfield_beta=8.0 \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
+
+python train.py \
+  --dataset=cifar10 \
+  --model_type=cnn \
   --phase1_steps=145000 \
   --phase2_steps=2000 \
   --n_gibbs=200 \
