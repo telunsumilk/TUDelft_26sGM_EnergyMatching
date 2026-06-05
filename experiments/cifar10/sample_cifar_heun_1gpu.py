@@ -19,6 +19,7 @@ import os, sys, math
 from datetime import datetime
 import torch
 from torchvision.utils import save_image, make_grid
+from tqdm import tqdm
 
 # ───────────────────────────────────────── Flags ─────────────────────────────────────────
 from absl import app, flags, logging
@@ -31,6 +32,8 @@ flags.DEFINE_float("t_end", 3.25,
                    "Final SDE time (t_start is fixed to 0).")
 flags.DEFINE_bool("use_ema", True,
                   "If True, load EMA weights; else raw weights.")
+flags.DEFINE_integer("progress_chunk_steps", 10,
+                     "SDE steps per tqdm progress update. Set <=0 to use the original one-shot sdeint call.")
 
 # ───────────────────────────────────– Model & Utils ──────────────────────────────────────
 from network_transformer_vit import EBViTModelWrapper
@@ -39,7 +42,7 @@ from utils_cifar_imagenet import plot_epsilon
 
 # ------------------------ Euler–Heun SDE integrator (modified) ---------------------------
 import torchsde
-def solve_sde_heun(model, x, t_start, t_end, dt=0.01):
+def solve_sde_heun(model, x, t_start, t_end, dt=0.01, progress_chunk_steps=10):
     """Integrate `x` from t_start to t_end with Stratonovich Euler–Heun."""
     if t_end <= t_start:
         return x
@@ -68,8 +71,26 @@ def solve_sde_heun(model, x, t_start, t_end, dt=0.01):
     sde  = _FlattenSDE(model)
     ts   = torch.arange(t_start, t_end + 1e-9, dt, device=x.device)
     with torch.no_grad():
-        x_sol = torchsde.sdeint(sde, x_flat, ts, method="heun", dt=dt)
-    return x_sol[-1].view(*orig_shape).clamp(-1, 1)
+        if progress_chunk_steps <= 0:
+            x_sol = torchsde.sdeint(sde, x_flat, ts, method="heun", dt=dt)
+            x_flat = x_sol[-1]
+        else:
+            total_steps = len(ts) - 1
+            for start in tqdm(
+                range(0, total_steps, progress_chunk_steps),
+                desc="Sampling SDE",
+                unit="chunk",
+            ):
+                end = min(start + progress_chunk_steps, total_steps)
+                x_sol = torchsde.sdeint(
+                    sde,
+                    x_flat,
+                    ts[start : end + 1],
+                    method="heun",
+                    dt=dt,
+                )
+                x_flat = x_sol[-1]
+    return x_flat.view(*orig_shape).clamp(-1, 1)
 
 # ────────────────────────────────────────── Main ─────────────────────────────────────────
 def main(_):
@@ -109,7 +130,14 @@ def main(_):
 
     # 4) Noise → image
     x = torch.randn(FLAGS.batch_size, 3, 32, 32, device=device)
-    x = solve_sde_heun(model, x, 0.0, FLAGS.t_end, dt=FLAGS.dt_gibbs)  # in [‑1,1]
+    x = solve_sde_heun(
+        model,
+        x,
+        0.0,
+        FLAGS.t_end,
+        dt=FLAGS.dt_gibbs,
+        progress_chunk_steps=FLAGS.progress_chunk_steps,
+    )  # in [‑1,1]
     x_01 = (x + 1.0) / 2.0                                             # → [0,1]
 
     # 5) Single‑grid save
