@@ -1,0 +1,134 @@
+I0605 01:29:00.681906 128094575523648 train_mnist.py:183] [Rank 0] Using output directory: /workspace/results_mnist/EBMTime_20260605_01
+
+I0605 01:29:00.682753 128094575523648 train_mnist.py:184] ========== Hyperparameters (FLAGS) ==========
+I0605 01:29:00.683228 128094575523648 train_mnist.py:186] logtostderr = False
+I0605 01:29:00.683901 128094575523648 train_mnist.py:186] alsologtostderr = False
+I0605 01:29:00.684256 128094575523648 train_mnist.py:186] log_dir = 
+I0605 01:29:00.684668 128094575523648 train_mnist.py:186] v = 0
+I0605 01:29:00.685069 128094575523648 train_mnist.py:186] verbosity = 0
+I0605 01:29:00.685813 128094575523648 train_mnist.py:186] logger_levels = {}
+I0605 01:29:00.686132 128094575523648 train_mnist.py:186] stderrthreshold = fatal
+I0605 01:29:00.686562 128094575523648 train_mnist.py:186] showprefixforinfo = True
+I0605 01:29:00.687000 128094575523648 train_mnist.py:186] run_with_pdb = False
+I0605 01:29:00.687402 128094575523648 train_mnist.py:186] pdb_post_mortem = False
+I0605 01:29:00.687770 128094575523648 train_mnist.py:186] pdb = False
+I0605 01:29:00.688173 128094575523648 train_mnist.py:186] run_with_profiling = False
+I0605 01:29:00.688474 128094575523648 train_mnist.py:186] profile_file = None
+I0605 01:29:00.688872 128094575523648 train_mnist.py:186] use_cprofile_for_profiling = True
+I0605 01:29:00.689247 128094575523648 train_mnist.py:186] only_check_args = False
+I0605 01:29:00.689635 128094575523648 train_mnist.py:186] model = EBMTime
+I0605 01:29:00.689983 128094575523648 train_mnist.py:186] output_dir = /workspace/results_mnist
+I0605 01:29:00.690805 128094575523648 train_mnist.py:186] num_channels = 32
+I0605 01:29:00.691160 128094575523648 train_mnist.py:186] num_res_blocks = 2
+I0605 01:29:00.691514 128094575523648 train_mnist.py:186] energy_clamp = None
+I0605 01:29:00.691998 128094575523648 train_mnist.py:186] num_heads = 2
+I0605 01:29:00.692342 128094575523648 train_mnist.py:186] num_head_channels = 64
+I0605 01:29:00.692916 128094575523648 train_mnist.py:186] dropout = 0.1
+I0605 01:29:00.693541 128094575523648 train_mnist.py:186] attention_resolutions = 16
+I0605 01:29:00.694026 128094575523648 train_mnist.py:186] embed_dim = 128
+I0605 01:29:00.694334 128094575523648 train_mnist.py:186] transformer_nheads = 2
+I0605 01:29:00.694713 128094575523648 train_mnist.py:186] transformer_nlayers = 2
+I0605 01:29:00.695067 128094575523648 train_mnist.py:186] output_scale = 100.0
+I0605 01:29:00.695877 128094575523648 train_mnist.py:186] channel_mult = ['1', '2', '2']
+I0605 01:29:00.696234 128094575523648 train_mnist.py:186] debug = False
+I0605 01:29:00.696533 128094575523648 train_mnist.py:186] lr = 0.0001
+I0605 01:29:00.696835 128094575523648 train_mnist.py:186] grad_clip = 1.0
+I0605 01:29:00.697147 128094575523648 train_mnist.py:186] total_steps = 53300
+I0605 01:29:00.697451 128094575523648 train_mnist.py:186] warmup = 10000
+I0605 01:29:00.697824 128094575523648 train_mnist.py:186] batch_size = 128
+I0605 01:29:00.698145 128094575523648 train_mnist.py:186] num_workers = 4
+I0605 01:29:00.698393 128094575523648 train_mnist.py:186] ema_decay = 0.99
+I0605 01:29:00.698781 128094575523648 train_mnist.py:186] save_step = 100
+I0605 01:29:00.699061 128094575523648 train_mnist.py:186] resume_ckpt = /workspace/results_mnist/EBMTime_20260604_22/checkpoint_50000.pt
+I0605 01:29:00.699381 128094575523648 train_mnist.py:186] epsilon_max = 0.1
+I0605 01:29:00.699671 128094575523648 train_mnist.py:186] dt_gibbs = 0.025
+I0605 01:29:00.699929 128094575523648 train_mnist.py:186] n_gibbs = 75
+I0605 01:29:00.700291 128094575523648 train_mnist.py:186] lambda_cd = 0.001
+I0605 01:29:00.705439 128094575523648 train_mnist.py:186] time_cutoff = 1.0
+I0605 01:29:00.705993 128094575523648 train_mnist.py:186] cd_neg_clamp = 0.05
+I0605 01:29:00.706354 128094575523648 train_mnist.py:186] cd_trim_fraction = 0.0
+I0605 01:29:00.706683 128094575523648 train_mnist.py:186] split_negative = True
+I0605 01:29:00.706958 128094575523648 train_mnist.py:186] same_temperature_scheduler = True
+I0605 01:29:00.707282 128094575523648 train_mnist.py:186] my_log_dir = /workspace/results_mnist/EBMTime_20260605_01
+I0605 01:29:00.707978 128094575523648 train_mnist.py:186] ? = False
+I0605 01:29:00.708290 128094575523648 train_mnist.py:186] help = False
+I0605 01:29:00.708647 128094575523648 train_mnist.py:186] helpshort = False
+I0605 01:29:00.708922 128094575523648 train_mnist.py:186] helpfull = False
+I0605 01:29:00.709230 128094575523648 train_mnist.py:186] helpxml = False
+I0605 01:29:00.709503 128094575523648 train_mnist.py:187] =============================================
+
+I0605 01:29:01.800477 128094575523648 train_mnist.py:265] Total trainable params: 2035460
+I0605 01:29:01.807548 128094575523648 train_mnist.py:283] [Rank 0] Resuming from /workspace/results_mnist/EBMTime_20260604_22/checkpoint_50000.pt
+I0605 01:29:03.149803 128094575523648 train_mnist.py:303] [Rank 0] Resumed at step=50000
+I0605 01:29:11.921107 128094575523648 train_mnist.py:362] [Step 50000] flow=0.05829, cd=-0.05000, pos_std=77.24540, pos_min=-3518.36768, pos_max=-3162.42139, neg_std=62.21463, neg_min=-3347.26855, neg_max=-3074.27563, LR=0.000100, 1.15 it/s
+I0605 01:29:41.750897 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_time_evolution_step_50000.png
+I0605 01:30:05.716417 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_gibbs_diagnostic_step_50000.png
+I0605 01:30:34.804286 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_time_evolution_step_50000.png
+I0605 01:31:00.012521 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_gibbs_diagnostic_step_50000.png
+I0605 01:31:03.253467 128094575523648 train_mnist.py:411] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/EBMTime_cifar10_weights_step_latest.pt
+I0605 01:31:03.253882 128094575523648 train_mnist.py:412] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/checkpoint_50000.pt
+I0605 01:31:30.342731 128094575523648 train_mnist.py:362] [Step 50010] flow=0.05965, cd=-0.05000, pos_std=71.75790, pos_min=-3519.18018, pos_max=-3179.71948, neg_std=54.63080, neg_min=-3355.46875, neg_max=-3074.29077, LR=0.000100, 0.07 it/s
+I0605 01:31:57.310302 128094575523648 train_mnist.py:362] [Step 50020] flow=0.05196, cd=-0.05000, pos_std=81.04025, pos_min=-3498.20703, pos_max=-3143.42432, neg_std=65.56473, neg_min=-3347.38623, neg_max=-3048.36743, LR=0.000100, 0.37 it/s
+I0605 01:32:24.617739 128094575523648 train_mnist.py:362] [Step 50030] flow=0.04666, cd=-0.05000, pos_std=70.99445, pos_min=-3502.05420, pos_max=-3213.69092, neg_std=62.69315, neg_min=-3374.56982, neg_max=-3080.16943, LR=0.000100, 0.37 it/s
+I0605 01:32:50.876213 128094575523648 train_mnist.py:362] [Step 50040] flow=0.04293, cd=-0.05000, pos_std=70.83902, pos_min=-3415.22510, pos_max=-3093.49072, neg_std=57.18198, neg_min=-3272.50562, neg_max=-3000.78003, LR=0.000100, 0.38 it/s
+I0605 01:33:16.575389 128094575523648 train_mnist.py:362] [Step 50050] flow=0.05321, cd=-0.05000, pos_std=75.79926, pos_min=-3412.43066, pos_max=-3062.59424, neg_std=63.56195, neg_min=-3266.66040, neg_max=-2980.14111, LR=0.000100, 0.39 it/s
+I0605 01:33:43.927785 128094575523648 train_mnist.py:362] [Step 50060] flow=0.05363, cd=-0.05000, pos_std=83.56860, pos_min=-3574.43848, pos_max=-3228.02344, neg_std=57.32399, neg_min=-3425.17163, neg_max=-3161.13184, LR=0.000100, 0.37 it/s
+I0605 01:34:10.381457 128094575523648 train_mnist.py:362] [Step 50070] flow=0.05393, cd=-0.05000, pos_std=79.00436, pos_min=-3528.38892, pos_max=-3171.31348, neg_std=59.05865, neg_min=-3375.51880, neg_max=-3102.28320, LR=0.000100, 0.38 it/s
+I0605 01:34:36.725380 128094575523648 train_mnist.py:362] [Step 50080] flow=0.05140, cd=-0.05000, pos_std=74.48709, pos_min=-3462.82397, pos_max=-3144.38965, neg_std=58.20794, neg_min=-3297.62988, neg_max=-3003.60840, LR=0.000100, 0.38 it/s
+I0605 01:35:03.568186 128094575523648 train_mnist.py:362] [Step 50090] flow=0.05815, cd=-0.05000, pos_std=80.32912, pos_min=-3461.80469, pos_max=-3086.42114, neg_std=60.38476, neg_min=-3320.35938, neg_max=-3001.36450, LR=0.000100, 0.37 it/s
+I0605 01:35:29.313226 128094575523648 train_mnist.py:362] [Step 50100] flow=0.05964, cd=-0.05000, pos_std=79.13072, pos_min=-3505.06128, pos_max=-3146.63428, neg_std=56.71061, neg_min=-3363.65503, neg_max=-3096.91626, LR=0.000100, 0.39 it/s
+I0605 01:35:56.764958 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_time_evolution_step_50100.png
+I0605 01:36:20.209413 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_gibbs_diagnostic_step_50100.png
+I0605 01:36:48.084693 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_time_evolution_step_50100.png
+I0605 01:37:11.913470 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_gibbs_diagnostic_step_50100.png
+I0605 01:37:15.004805 128094575523648 train_mnist.py:411] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/EBMTime_cifar10_weights_step_latest.pt
+I0605 01:37:15.010059 128094575523648 train_mnist.py:412] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/checkpoint_50100.pt
+I0605 01:37:41.094993 128094575523648 train_mnist.py:362] [Step 50110] flow=0.05154, cd=-0.05000, pos_std=69.97128, pos_min=-3526.86621, pos_max=-3187.58032, neg_std=57.02881, neg_min=-3351.40674, neg_max=-3102.69678, LR=0.000100, 0.08 it/s
+I0605 01:38:06.963343 128094575523648 train_mnist.py:362] [Step 50120] flow=0.05691, cd=-0.05000, pos_std=71.92758, pos_min=-3479.89355, pos_max=-3126.67310, neg_std=57.24023, neg_min=-3324.81299, neg_max=-3029.80078, LR=0.000100, 0.39 it/s
+I0605 01:38:32.899081 128094575523648 train_mnist.py:362] [Step 50130] flow=0.05140, cd=-0.05000, pos_std=76.21660, pos_min=-3483.79736, pos_max=-3145.59863, neg_std=57.39061, neg_min=-3332.65771, neg_max=-3054.56543, LR=0.000100, 0.39 it/s
+I0605 01:38:59.141267 128094575523648 train_mnist.py:362] [Step 50140] flow=0.05270, cd=-0.05000, pos_std=67.40443, pos_min=-3378.89551, pos_max=-3080.89453, neg_std=60.22497, neg_min=-3234.77783, neg_max=-2953.15234, LR=0.000100, 0.38 it/s
+I0605 01:39:25.059048 128094575523648 train_mnist.py:362] [Step 50150] flow=0.06263, cd=-0.05000, pos_std=70.71206, pos_min=-3506.89697, pos_max=-3149.16284, neg_std=62.50809, neg_min=-3372.86157, neg_max=-3061.09497, LR=0.000100, 0.39 it/s
+I0605 01:39:50.344343 128094575523648 train_mnist.py:362] [Step 50160] flow=0.06059, cd=-0.05000, pos_std=70.81998, pos_min=-3495.09277, pos_max=-3186.75879, neg_std=60.98263, neg_min=-3385.44312, neg_max=-3074.28516, LR=0.000100, 0.40 it/s
+I0605 01:40:15.958968 128094575523648 train_mnist.py:362] [Step 50170] flow=0.05665, cd=-0.05000, pos_std=76.98420, pos_min=-3483.23438, pos_max=-3147.84619, neg_std=61.48353, neg_min=-3336.85156, neg_max=-3062.29175, LR=0.000100, 0.39 it/s
+I0605 01:40:41.606676 128094575523648 train_mnist.py:362] [Step 50180] flow=0.05867, cd=-0.05000, pos_std=74.96232, pos_min=-3452.25171, pos_max=-3135.46265, neg_std=64.87907, neg_min=-3345.00195, neg_max=-3032.01782, LR=0.000100, 0.39 it/s
+I0605 01:41:07.029409 128094575523648 train_mnist.py:362] [Step 50190] flow=0.05042, cd=-0.05000, pos_std=81.52379, pos_min=-3471.40308, pos_max=-3111.45581, neg_std=65.06929, neg_min=-3323.77710, neg_max=-3012.62500, LR=0.000100, 0.39 it/s
+I0605 01:41:32.432624 128094575523648 train_mnist.py:362] [Step 50200] flow=0.04901, cd=-0.05000, pos_std=78.96970, pos_min=-3533.76245, pos_max=-3211.10840, neg_std=62.79035, neg_min=-3370.80688, neg_max=-3074.40137, LR=0.000100, 0.39 it/s
+I0605 01:42:00.167207 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_time_evolution_step_50200.png
+I0605 01:42:24.477411 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_gibbs_diagnostic_step_50200.png
+I0605 01:42:52.867241 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_time_evolution_step_50200.png
+I0605 01:43:17.212861 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_gibbs_diagnostic_step_50200.png
+I0605 01:43:20.335240 128094575523648 train_mnist.py:411] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/EBMTime_cifar10_weights_step_latest.pt
+I0605 01:43:20.335912 128094575523648 train_mnist.py:412] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/checkpoint_50200.pt
+I0605 01:43:46.536569 128094575523648 train_mnist.py:362] [Step 50210] flow=0.05562, cd=-0.05000, pos_std=75.61951, pos_min=-3541.97168, pos_max=-3196.38403, neg_std=54.27401, neg_min=-3384.87842, neg_max=-3125.70288, LR=0.000100, 0.07 it/s
+I0605 01:44:12.664548 128094575523648 train_mnist.py:362] [Step 50220] flow=0.05635, cd=-0.05000, pos_std=74.19072, pos_min=-3582.56787, pos_max=-3245.38428, neg_std=58.41712, neg_min=-3408.88818, neg_max=-3116.80493, LR=0.000100, 0.38 it/s
+I0605 01:44:38.476958 128094575523648 train_mnist.py:362] [Step 50230] flow=0.05383, cd=-0.05000, pos_std=70.27156, pos_min=-3438.58105, pos_max=-3097.56372, neg_std=55.56800, neg_min=-3286.12109, neg_max=-3025.80615, LR=0.000100, 0.39 it/s
+I0605 01:45:06.209017 128094575523648 train_mnist.py:362] [Step 50240] flow=0.04948, cd=-0.05000, pos_std=69.46507, pos_min=-3529.51172, pos_max=-3212.22388, neg_std=49.70302, neg_min=-3329.78052, neg_max=-3092.62012, LR=0.000100, 0.36 it/s
+I0605 01:45:32.622235 128094575523648 train_mnist.py:362] [Step 50250] flow=0.05428, cd=-0.05000, pos_std=74.01703, pos_min=-3541.19043, pos_max=-3176.77197, neg_std=59.91760, neg_min=-3376.94702, neg_max=-3092.08594, LR=0.000100, 0.38 it/s
+I0605 01:45:59.460994 128094575523648 train_mnist.py:362] [Step 50260] flow=0.04906, cd=-0.05000, pos_std=74.96104, pos_min=-3533.53345, pos_max=-3208.59985, neg_std=57.06299, neg_min=-3374.76807, neg_max=-3116.12549, LR=0.000100, 0.37 it/s
+I0605 01:46:26.783609 128094575523648 train_mnist.py:362] [Step 50270] flow=0.05249, cd=-0.05000, pos_std=74.67722, pos_min=-3533.23511, pos_max=-3151.90967, neg_std=61.81857, neg_min=-3367.23706, neg_max=-3083.60620, LR=0.000100, 0.37 it/s
+I0605 01:46:52.969994 128094575523648 train_mnist.py:362] [Step 50280] flow=0.04952, cd=-0.05000, pos_std=85.44293, pos_min=-3445.30908, pos_max=-3066.84326, neg_std=61.26520, neg_min=-3280.23975, neg_max=-3011.57422, LR=0.000100, 0.38 it/s
+I0605 01:47:19.358267 128094575523648 train_mnist.py:362] [Step 50290] flow=0.05826, cd=-0.05000, pos_std=76.07613, pos_min=-3573.89795, pos_max=-3249.59253, neg_std=63.45827, neg_min=-3443.42456, neg_max=-3148.30811, LR=0.000100, 0.38 it/s
+I0605 01:47:45.229865 128094575523648 train_mnist.py:362] [Step 50300] flow=0.05006, cd=-0.05000, pos_std=69.72615, pos_min=-3381.01660, pos_max=-3061.23413, neg_std=53.58359, neg_min=-3263.15918, neg_max=-2949.15894, LR=0.000100, 0.39 it/s
+I0605 01:48:15.952669 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_time_evolution_step_50300.png
+I0605 01:48:41.552522 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_gibbs_diagnostic_step_50300.png
+I0605 01:49:09.387662 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_time_evolution_step_50300.png
+I0605 01:49:35.149887 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_gibbs_diagnostic_step_50300.png
+I0605 01:49:38.261774 128094575523648 train_mnist.py:411] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/EBMTime_cifar10_weights_step_latest.pt
+I0605 01:49:38.262389 128094575523648 train_mnist.py:412] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/checkpoint_50300.pt
+I0605 01:50:04.571081 128094575523648 train_mnist.py:362] [Step 50310] flow=0.04752, cd=-0.05000, pos_std=72.46269, pos_min=-3471.59839, pos_max=-3143.51196, neg_std=63.55440, neg_min=-3339.20215, neg_max=-3060.26562, LR=0.000100, 0.07 it/s
+I0605 01:50:30.697433 128094575523648 train_mnist.py:362] [Step 50320] flow=0.05397, cd=-0.05000, pos_std=78.54252, pos_min=-3508.43115, pos_max=-3151.01538, neg_std=68.87348, neg_min=-3352.38159, neg_max=-3006.02563, LR=0.000100, 0.38 it/s
+I0605 01:50:57.213890 128094575523648 train_mnist.py:362] [Step 50330] flow=0.05584, cd=-0.05000, pos_std=79.91010, pos_min=-3626.08765, pos_max=-3275.92090, neg_std=63.20655, neg_min=-3484.28345, neg_max=-3184.20874, LR=0.000100, 0.38 it/s
+I0605 01:51:23.809059 128094575523648 train_mnist.py:362] [Step 50340] flow=0.05645, cd=-0.05000, pos_std=70.60210, pos_min=-3472.61963, pos_max=-3175.08936, neg_std=56.48047, neg_min=-3320.32690, neg_max=-3080.93921, LR=0.000100, 0.38 it/s
+I0605 01:51:49.972647 128094575523648 train_mnist.py:362] [Step 50350] flow=0.05737, cd=-0.05000, pos_std=80.47679, pos_min=-3579.88428, pos_max=-3254.31299, neg_std=60.67459, neg_min=-3421.99023, neg_max=-3150.01074, LR=0.000100, 0.38 it/s
+I0605 01:52:16.525641 128094575523648 train_mnist.py:362] [Step 50360] flow=0.06122, cd=-0.05000, pos_std=76.71624, pos_min=-3426.94482, pos_max=-3105.73657, neg_std=62.17505, neg_min=-3293.14453, neg_max=-3000.73120, LR=0.000100, 0.38 it/s
+I0605 01:52:42.904390 128094575523648 train_mnist.py:362] [Step 50370] flow=0.04810, cd=-0.05000, pos_std=75.51854, pos_min=-3499.72070, pos_max=-3074.30371, neg_std=60.76533, neg_min=-3335.08862, neg_max=-3029.40601, LR=0.000100, 0.38 it/s
+I0605 01:53:08.661709 128094575523648 train_mnist.py:362] [Step 50380] flow=0.04992, cd=-0.05000, pos_std=63.28313, pos_min=-3540.46631, pos_max=-3225.07373, neg_std=55.47392, neg_min=-3380.43433, neg_max=-3131.79346, LR=0.000100, 0.39 it/s
+I0605 01:53:34.802047 128094575523648 train_mnist.py:362] [Step 50390] flow=0.05127, cd=-0.05000, pos_std=79.56648, pos_min=-3527.51270, pos_max=-3153.63574, neg_std=56.08435, neg_min=-3348.39893, neg_max=-3087.64917, LR=0.000100, 0.38 it/s
+I0605 01:54:00.673883 128094575523648 train_mnist.py:362] [Step 50400] flow=0.06311, cd=-0.05000, pos_std=70.48822, pos_min=-3528.50049, pos_max=-3221.37329, neg_std=62.94574, neg_min=-3384.35718, neg_max=-3119.59497, LR=0.000100, 0.39 it/s
+I0605 01:54:30.924216 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_time_evolution_step_50400.png
+I0605 01:54:54.730721 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/normal_gibbs_diagnostic_step_50400.png
+I0605 01:55:23.183053 128094575523648 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_time_evolution_step_50400.png
+I0605 01:55:47.704549 128094575523648 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to /workspace/results_mnist/EBMTime_20260605_01/ema_gibbs_diagnostic_step_50400.png
+I0605 01:55:50.988438 128094575523648 train_mnist.py:411] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/EBMTime_cifar10_weights_step_latest.pt
+I0605 01:55:50.988916 128094575523648 train_mnist.py:412] [Rank 0] Saved checkpoint => /workspace/results_mnist/EBMTime_20260605_01/checkpoint_50400.pt
+I0605 01:56:16.672282 128094575523648 train_mnist.py:362] [Step 50410] flow=0.04846, cd=-0.05000, pos_std=76.24481, pos_min=-3576.48315, pos_max=-3228.79858, neg_std=68.53600, neg_min=-3391.63281, neg_max=-3098.71973, LR=0.000100, 0.07 it/s

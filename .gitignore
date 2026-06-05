@@ -54,3 +54,4 @@ experiments/toy2d/checkpoint_2D/
 # OS
 .DS_Store
 Thumbs.db
+*.pt
