@@ -1,14 +1,14 @@
 ###############################################################################
-# File: evaluate_cifar_generated.py
+# File: evaluate_mnist_generated.py
 #
 # Purpose:
-#   Compute image quality metrics for an existing folder of generated CIFAR-10
+#   Compute image quality metrics for an existing folder of generated MNIST
 #   samples. This does not generate images; it evaluates PNGs saved by
-#   generate_cifar_dataset.py or any compatible script.
+#   generate_mnist_dataset.py or any compatible script.
 #
 # Example:
-#   python experiments/cifar10/evaluate_cifar_generated.py \
-#       --generated_dir=./sampling_results/cifar10_em_20260604_120000/images \
+#   python experiments/mnist/evaluate_mnist_generated.py \
+#       --generated_dir=./sampling_results/mnist_em_20260605_165935/images \
 #       --batch_size=128 \
 #       --num_workers=4
 ###############################################################################
@@ -38,19 +38,19 @@ flags.DEFINE_string(
     "Directory where metric summary JSON will be saved.",
 )
 flags.DEFINE_string(
-    "cifar10_path",
+    "mnist_path",
     None,
-    "CIFAR-10 root directory. Defaults to CIFAR10_PATH env var or ./data.",
+    "MNIST root directory. Defaults to MNIST_PATH env var or ./data.",
 )
 flags.DEFINE_bool(
-    "download_cifar10",
+    "download_mnist",
     True,
-    "Download CIFAR-10 if it is not already present.",
+    "Download MNIST if it is not already present.",
 )
 flags.DEFINE_bool(
     "use_train_split",
     True,
-    "Use CIFAR-10 train split as the real distribution. If False, use test split.",
+    "Use MNIST train split as the real distribution. If False, use test split.",
 )
 flags.DEFINE_integer("batch_size", 128, "Batch size for metric updates.")
 flags.DEFINE_integer("num_workers", 4, "DataLoader workers.")
@@ -134,12 +134,16 @@ def main(_):
         drop_last=False,
     )
 
-    cifar_root = FLAGS.cifar10_path or os.environ.get("CIFAR10_PATH", "./data")
-    real_dataset = __import__("torchvision").datasets.CIFAR10(
-        root=cifar_root,
+    mnist_root = FLAGS.mnist_path or os.environ.get("MNIST_PATH", "./data")
+    real_dataset = __import__("torchvision").datasets.MNIST(
+        root=mnist_root,
         train=FLAGS.use_train_split,
-        download=FLAGS.download_cifar10,
-        transform=T.ToTensor(),
+        download=FLAGS.download_mnist,
+        transform=T.Compose([
+            T.Resize((32, 32)),
+            T.Grayscale(num_output_channels=3),
+            T.ToTensor(),
+        ]),
     )
     real_loader = DataLoader(
         real_dataset,
@@ -181,14 +185,14 @@ def main(_):
         "generated_dir": FLAGS.generated_dir,
         "num_generated_available": n_fake_total,
         "num_eval": n_eval,
-        "real_dataset": "CIFAR10",
+        "real_dataset": "MNIST",
         "real_split": "train" if FLAGS.use_train_split else "test",
         "timestamp": datetime.now().isoformat(timespec="seconds"),
     }
 
     out_path = os.path.join(
         FLAGS.output_dir,
-        f"fid_cifar10_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        f"fid_mnist_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
     )
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
