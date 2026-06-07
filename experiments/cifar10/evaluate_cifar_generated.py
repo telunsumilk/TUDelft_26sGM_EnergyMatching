@@ -22,6 +22,7 @@ from absl import app, flags, logging
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.kid import KernelInceptionDistance
 from tqdm import tqdm
 
 FLAGS = flags.FLAGS
@@ -149,23 +150,34 @@ def main(_):
     )
 
     n_eval = min(max_samples, len(real_dataset))
-    logging.info(f"Evaluating FID with {n_eval} real and {n_eval} generated images.")
+    logging.info(f"Evaluating FID and KID with {n_eval} real and {n_eval} generated images.")
 
     fid = FrechetInceptionDistance(feature=2048).to(device)
+    kid = KernelInceptionDistance(subset_size=min(50, n_eval)).to(device)
 
     for images in tqdm(limited_batches(real_loader, n_eval), desc="Real images", unit="batch"):
-        fid.update(to_uint8(images.to(device)), real=True)
+        uint8_images = to_uint8(images.to(device))
+        fid.update(uint8_images, real=True)
+        kid.update(uint8_images, real=True)
 
     for images in tqdm(limited_batches(fake_loader, n_eval), desc="Generated images", unit="batch"):
-        fid.update(to_uint8(images.to(device)), real=False)
+        uint8_images = to_uint8(images.to(device))
+        fid.update(uint8_images, real=False)
+        kid.update(uint8_images, real=False)
 
     fid_score = float(fid.compute().detach().cpu())
+    kid_mean, kid_std = kid.compute()
+    kid_mean = float(kid_mean.detach().cpu())
+    kid_std = float(kid_std.detach().cpu())
     logging.info(f"FID = {fid_score:.4f}")
+    logging.info(f"KID = {kid_mean:.4f} ± {kid_std:.4f}")
 
     os.makedirs(FLAGS.output_dir, exist_ok=True)
     summary = {
-        "metric": "FID",
+        "metric": "FID/KID",
         "fid": fid_score,
+        "kid_mean": kid_mean,
+        "kid_std": kid_std,
         "generated_dir": FLAGS.generated_dir,
         "num_generated_available": n_fake_total,
         "num_eval": n_eval,
