@@ -35,7 +35,13 @@ from network_transformer_vit import (
     EBSimpleEncoderWrapper,
     EBViTModelWrapper,
 )
-from fid import solve_sde_heun, simulate_image_trajectory, plot_image_trajectories
+from fid import (
+    solve_sde_heun,
+    simulate_image_trajectory,
+    simulate_image_trajectory_dense,
+    plot_image_trajectories,
+    plot_pca_trajectories,
+)
 
 FLAGS = flags.FLAGS
 
@@ -55,6 +61,11 @@ flags.DEFINE_integer("trajectory_samples", 8,
                      "Number of sample rows to show in the trajectory grid.")
 flags.DEFINE_integer("trajectory_steps", 10,
                      "Number of time columns in the trajectory grid.")
+flags.DEFINE_bool("save_pca", True,
+                  "Save a PCA trajectory plot (noise → generated in 2D projection).")
+flags.DEFINE_integer("pca_samples", 256, "Number of samples for the PCA trajectory.")
+flags.DEFINE_integer("pca_n_highlight", 15, "Number of individual paths to highlight in red.")
+flags.DEFINE_integer("pca_record_every", 10, "Record a PCA frame every N SDE steps.")
 
 
 # ---------------------------------------------------------------------------- #
@@ -167,6 +178,24 @@ def main(argv):
         traj_path = os.path.join(FLAGS.savedir, "trajectory.png")
         plot_image_trajectories(frames, n_samples=n, savepath=traj_path)
         logging.info(f"Trajectory grid saved to {traj_path}")
+
+    if FLAGS.save_pca:
+        x_pca = torch.randn(FLAGS.pca_samples, 3, 32, 32, device=device)
+        frames_pca = simulate_image_trajectory_dense(
+            model, x_pca, FLAGS.t_end, dt=FLAGS.dt,
+            record_every=FLAGS.pca_record_every,
+        )
+        pca_path = os.path.join(FLAGS.savedir, "pca_trajectory.png")
+        plot_pca_trajectories(frames_pca, n_highlight=FLAGS.pca_n_highlight, savepath=pca_path)
+        logging.info(f"PCA trajectory saved to {pca_path}")
+
+        # Companion image grid for the highlighted PCA samples
+        stride = max(1, len(frames_pca) // 10)
+        frames_pca_grid = [(t, imgs[:FLAGS.pca_n_highlight]) for t, imgs in frames_pca[::stride]]
+        pca_grid_path = os.path.join(FLAGS.savedir, "pca_trajectory_grid.png")
+        plot_image_trajectories(frames_pca_grid, n_samples=FLAGS.pca_n_highlight,
+                                savepath=pca_grid_path)
+        logging.info(f"PCA companion grid saved to {pca_grid_path}")
 
     logging.info("Done.")
 
