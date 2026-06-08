@@ -55,8 +55,11 @@ flags.DEFINE_float("mask_fraction", 0.5,
                    "For mask_type=center: side length of the square block as a fraction of H/W. "
                    "For mask_type=random: fraction of total pixels to mask.")
 flags.DEFINE_integer("num_chains", 4, "Parallel Langevin chains per image.")
-flags.DEFINE_integer("n_inpaint_steps", 200, "Langevin steps per image.")
-flags.DEFINE_float("dt_inpaint", 0.01, "Langevin step size.")
+flags.DEFINE_integer("n_inpaint_steps", 1000, "Langevin steps per image.")
+flags.DEFINE_float("dt_inpaint", 0.001, "Langevin step size (default: 0.001 → total chain time = 1.0 at n_inpaint_steps=1000).")
+flags.DEFINE_float("t_inpaint", 1.0,
+                   "Model time t at which the energy is evaluated during Langevin sampling. "
+                   "1.0 matches the Phase 2 CD training point where the energy is best calibrated.")
 flags.DEFINE_float("epsilon_inpaint", 0.05,
                    "Max noise scale ε at the start of Langevin sampling (annealed toward epsilon_inpaint_min).")
 flags.DEFINE_float("epsilon_inpaint_min", 0.0,
@@ -224,7 +227,10 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
     eps_min = FLAGS.epsilon_inpaint_min
     schedule = FLAGS.epsilon_schedule
     N_steps = FLAGS.n_inpaint_steps
-    logging.info(f"Epsilon annealing ({schedule}): {eps_max:.4f} → {eps_min:.5f}")
+    logging.info(
+        f"Langevin: {N_steps} steps × dt={dt} = T={N_steps * dt:.2f}  "
+        f"t_model={FLAGS.t_inpaint}  ε {eps_max:.4f}→{eps_min:.4f} ({schedule})"
+    )
     sigma = FLAGS.interaction_sigma
 
     # Repeat observed image across all chains: (N, C, H, W)
@@ -235,7 +241,7 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
     x = torch.where(mask4, torch.randn_like(y_obs), y_obs)
 
     obs4 = (~inpaint_mask).unsqueeze(0).unsqueeze(0)  # (1, 1, H, W) True = observed
-    t_dummy = torch.zeros(N, device=device)
+    t_dummy = torch.full((N,), FLAGS.t_inpaint, device=device)
 
     # Interaction mask B: sub-region of the inpainted area where diversity is encouraged.
     # interaction_mask_fraction=1.0 → full mask; 0.0 → disabled; intermediate → inner crop.
@@ -342,6 +348,7 @@ def save_params(savedir):
         "num_chains": FLAGS.num_chains,
         "n_inpaint_steps": FLAGS.n_inpaint_steps,
         "dt_inpaint": FLAGS.dt_inpaint,
+        "t_inpaint": FLAGS.t_inpaint,
         "epsilon_inpaint": FLAGS.epsilon_inpaint,
         "epsilon_inpaint_min": FLAGS.epsilon_inpaint_min,
         "epsilon_schedule": FLAGS.epsilon_schedule,
