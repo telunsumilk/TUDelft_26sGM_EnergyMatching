@@ -54,6 +54,9 @@ def define_flags():
     # Dataset
     # ------------------------------------------------------------------ #
     flags.DEFINE_string("dataset", "cifar10", "Dataset to use: cifar10 | imagenet32.")
+    flags.DEFINE_float("color_jitter", 0.0,
+                       "Color jitter strength for brightness/contrast/saturation (hue = strength/4). "
+                       "0 = disabled. Typical: 0.2 (mild) to 0.4 (strong).")
     flags.DEFINE_list("cifar_classes", [],
                       "Comma-separated CIFAR-10 class indices (0-9) to train on. "
                       "Empty = all 10 classes. "

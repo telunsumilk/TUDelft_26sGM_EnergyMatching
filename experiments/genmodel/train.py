@@ -59,18 +59,18 @@ def get_dataset():
     if FLAGS.dataset == "cifar10":
         from dataset_cifar import get_cifar10_dataset
         class_indices = [int(c) for c in FLAGS.cifar_classes] or None
-        return get_cifar10_dataset(class_indices=class_indices)
+        return get_cifar10_dataset(class_indices=class_indices, color_jitter=FLAGS.color_jitter)
     elif FLAGS.dataset == "imagenet32":
         from dataset_imagenet32 import ImageNet32Dataset
         class_indices = [int(c) for c in FLAGS.imagenet_classes] or None
+        extra = []
+        if FLAGS.color_jitter > 0.0:
+            extra.append(T.ColorJitter(brightness=FLAGS.color_jitter, contrast=FLAGS.color_jitter,
+                                       saturation=FLAGS.color_jitter, hue=FLAGS.color_jitter / 4))
         return ImageNet32Dataset(
             split="train",
-            transform=T.Compose([
-                T.ToPILImage(),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]),
+            transform=T.Compose([T.ToPILImage(), T.RandomHorizontalFlip(), *extra,
+                                  T.ToTensor(), T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]),
             class_indices=class_indices,
         )
     raise ValueError(f"Unknown dataset: {FLAGS.dataset!r}")
