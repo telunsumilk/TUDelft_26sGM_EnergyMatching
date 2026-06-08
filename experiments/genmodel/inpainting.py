@@ -50,10 +50,12 @@ flags.DEFINE_enum(
     "center=center block, bottom=bottom half, random=random pixels.",
 )
 flags.DEFINE_float("mask_fraction", 0.5,
-                   "Fraction of pixels to mask (only used with mask_type=random).")
+                   "Fraction of the image side to mask. "
+                   "For mask_type=center: side length of the square block as a fraction of H/W. "
+                   "For mask_type=random: fraction of total pixels to mask.")
 flags.DEFINE_integer("num_chains", 4, "Parallel Langevin chains per image.")
-flags.DEFINE_integer("n_inpaint_steps", 300, "Langevin steps per image.")
-flags.DEFINE_float("dt_inpaint", 0.005, "Langevin step size.")
+flags.DEFINE_integer("n_inpaint_steps", 200, "Langevin steps per image.")
+flags.DEFINE_float("dt_inpaint", 0.01, "Langevin step size.")
 flags.DEFINE_float("epsilon_inpaint", 0.01,
                    "Noise scale ε; per-step noise std = sqrt(2·dt·ε).")
 flags.DEFINE_float(
@@ -144,7 +146,9 @@ def make_mask(H, W, device):
     """Returns (H, W) bool tensor — True = pixel is MISSING (to inpaint)."""
     mask = torch.zeros(H, W, dtype=torch.bool, device=device)
     if FLAGS.mask_type == "center":
-        mask[H // 4: 3 * H // 4, W // 4: 3 * W // 4] = True
+        sz = int(H * FLAGS.mask_fraction)
+        r0, c0 = (H - sz) // 2, (W - sz) // 2
+        mask[r0: r0 + sz, c0: c0 + sz] = True
     elif FLAGS.mask_type == "bottom":
         mask[H // 2:, :] = True
     else:  # random
@@ -228,6 +232,8 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
     B_2d = make_interaction_mask(inpaint_mask) if sigma > 0.0 else None
     B = B_2d.unsqueeze(0).unsqueeze(0) if B_2d is not None else None  # (1,1,H,W)
 
+    snapshots = {}  # step -> (N, C, H, W) tensor
+
     for step in range(FLAGS.n_inpaint_steps):
         with torch.no_grad():
             # model.velocity = -∇V; uses enable_grad internally so no_grad is safe
@@ -253,14 +259,15 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
 
         if (step + 1) % 100 == 0:
             logging.info(f"  step {step + 1}/{FLAGS.n_inpaint_steps}")
+            snapshots[step + 1] = x.detach().cpu()
 
-    return x
+    return x, snapshots
 
 
 # ---------------------------------------------------------------------------- #
 # Visualisation
 # ---------------------------------------------------------------------------- #
-def save_result(x_orig, inpaint_mask, inpainted, savedir, idx):
+def save_result(x_orig, inpaint_mask, inpainted, savedir, idx, step=None):
     """
     Saves a single-row grid:
         [original | masked_input | chain_0 | chain_1 | ... | chain_{N-1}]
@@ -277,9 +284,16 @@ def save_result(x_orig, inpaint_mask, inpainted, savedir, idx):
     grid = (grid + 1.0) / 2.0
 
     os.makedirs(savedir, exist_ok=True)
-    path = os.path.join(savedir, f"inpaint_{idx:04d}.png")
+    suffix = f"_step{step:04d}" if step is not None else ""
+    path = os.path.join(savedir, f"inpaint_{idx:04d}{suffix}.png")
     vutils.save_image(grid, path, nrow=2 + inpainted.shape[0], padding=2, normalize=False)
     logging.info(f"Saved {path}")
+
+
+def save_snapshots(x_orig, inpaint_mask, snapshots, savedir, idx):
+    """Save one grid per 100-step snapshot."""
+    for step, x_snap in snapshots.items():
+        save_result(x_orig, inpaint_mask, x_snap, savedir, idx, step=step)
 
 
 # ---------------------------------------------------------------------------- #
@@ -319,14 +333,15 @@ def main(argv):
             f"Custom image: {FLAGS.input_image}  mask_type={FLAGS.mask_type} "
             f"masked={inpaint_mask.sum().item()}/{H * W} pixels"
         )
-        inpainted = run_inpainting(x_orig, inpaint_mask, model, device)
+        inpainted, snapshots = run_inpainting(x_orig, inpaint_mask, model, device)
         save_result(x_orig.cpu(), inpaint_mask.cpu(), inpainted, savedir, 0)
+        save_snapshots(x_orig.cpu(), inpaint_mask.cpu(), snapshots, savedir, 0)
     else:
         dataset = CIFAR10(
             root="./data", train=False, download=True,
             transform=T.Compose([T.ToTensor(), T.Normalize((0.5,) * 3, (0.5,) * 3)]),
         )
-        loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
+        loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0)
 
         for idx, (images, _) in enumerate(loader):
             if idx >= FLAGS.num_test_images:
@@ -340,8 +355,9 @@ def main(argv):
                 f"[{idx + 1}/{FLAGS.num_test_images}] mask_type={FLAGS.mask_type} "
                 f"masked={inpaint_mask.sum().item()}/{H * W} pixels"
             )
-            inpainted = run_inpainting(x_orig, inpaint_mask, model, device)
+            inpainted, snapshots = run_inpainting(x_orig, inpaint_mask, model, device)
             save_result(x_orig.cpu(), inpaint_mask.cpu(), inpainted, savedir, idx)
+            save_snapshots(x_orig.cpu(), inpaint_mask.cpu(), snapshots, savedir, idx)
 
     logging.info("Done.")
 
