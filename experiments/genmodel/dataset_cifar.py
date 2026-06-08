@@ -18,7 +18,9 @@ def get_cifar10_dataset(root=None, class_indices=None):
     if root is None:
         root = os.environ.get("CIFAR10_PATH", "./data")
     transform = T.Compose([
+        T.RandomCrop(32, padding=4),
         T.RandomHorizontalFlip(),
+        T.RandomRotation(10),
         T.ToTensor(),
         T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])

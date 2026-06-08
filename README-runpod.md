@@ -253,7 +253,48 @@ cost and re-attach it later to a cheaper pod just for downloading.
 
 ---
 
-## 9. Resume from a checkpoint
+## 9. Run inpainting
+
+After training, run the inpainting demo on CIFAR-10 test images:
+
+```bash
+source /workspace/venv/bin/activate
+cd /workspace/EnergyMatching/experiments/genmodel
+
+python inpainting.py \
+  --checkpoint /workspace/EnergyMatching/results/genmodel_TIMESTAMP/cifar10_checkpoint_phase1_final.pt \
+  --num_test_images 1 \
+  --mask_type center \
+  --num_chains 2 \
+  --n_inpaint_steps 300 \
+  --inpaint_savedir results/inpainting
+```
+
+Results are saved to `results/inpainting/inpaint_0000.png` as a grid:
+`[original | masked input | chain 0 | chain 1 | ...]`
+
+To enable the interaction energy (encourages diverse completions):
+
+```bash
+python inpainting.py \
+  --checkpoint /workspace/EnergyMatching/results/genmodel_TIMESTAMP/cifar10_checkpoint_phase1_final.pt \
+  --num_test_images 1 \
+  --mask_type center \
+  --num_chains 4 \
+  --n_inpaint_steps 300 \
+  --interaction_sigma 0.5 \
+  --interaction_mask_fraction 0.5 \
+  --inpaint_savedir results/inpainting
+```
+
+`--interaction_mask_fraction` controls which sub-region of the mask drives diversity:
+`1.0` = full inpaint mask, `0.5` = inner half of its bounding box, `0.0` = disabled.
+
+Because results live on the Network Volume, they persist when the pod is stopped.
+
+---
+
+## 10. Resume from a checkpoint
 
 ```bash
 source /workspace/venv/bin/activate

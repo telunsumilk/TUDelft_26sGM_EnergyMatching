@@ -66,7 +66,9 @@ def get_dataset():
             split="train",
             transform=T.Compose([
                 T.ToPILImage(),
+                T.RandomCrop(32, padding=4),
                 T.RandomHorizontalFlip(),
+                T.RandomRotation(10),
                 T.ToTensor(),
                 T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]),

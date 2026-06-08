@@ -13,6 +13,8 @@ Standalone:
 import os
 import sys
 
+import matplotlib
+matplotlib.use('Agg')  # headless backend — must be set before pyplot is imported
 import torch
 import torchsde
 from absl import app, flags, logging
@@ -101,6 +103,13 @@ def simulate_image_trajectory(model, x_init, times, dt=0.01):
     t_prev = 0.0
     for t_end in times:
         x = solve_sde_heun(model, x, t_prev, t_end, dt=dt)
+        n_nan = x.isnan().any(dim=(1, 2, 3)).sum().item()
+        if n_nan > 0:
+            logging.warning(
+                f"simulate_image_trajectory: {n_nan}/{x.size(0)} samples have NaN "
+                f"at t={t_end:.2f} — SDE diverged (model under-trained or dt too large). "
+                f"Trajectory grid will show gray patches."
+            )
         frames.append((t_end, x.detach().cpu()))
         t_prev = t_end
     return frames
@@ -246,7 +255,8 @@ def plot_image_trajectories(frames, n_samples=8, savepath=None):
             ax = axes[row, col]
             img = imgs[row]                        # (3, 32, 32) in [-1, 1]
             img = ((img + 1.0) / 2.0).clamp(0, 1) # → [0, 1]
-            ax.imshow(img.permute(1, 2, 0).numpy())
+            # .float() handles fp16/bf16; nan_to_num replaces NaN (diverged SDE) with 0.5 gray
+            ax.imshow(img.float().nan_to_num(0.5).permute(1, 2, 0).numpy())
             ax.set_xticks([])
             ax.set_yticks([])
             # coloured border matching toy2d colour scheme
