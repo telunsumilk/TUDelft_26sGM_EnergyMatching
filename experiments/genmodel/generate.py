@@ -116,6 +116,7 @@ def apply_flags_from_log(checkpoint_path, argv_flags):
         logging.warning(f"train.INFO not found at {log_path} — using default flags.")
         return
 
+    logging.info(f"Reading training flags from {log_path}")
     parsed = _parse_log(log_path)
     applied = []
     for name in _RECOVER_FLAGS:
