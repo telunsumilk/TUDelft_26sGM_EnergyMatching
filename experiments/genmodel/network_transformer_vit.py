@@ -548,6 +548,23 @@ class EBHopfieldModelWrapper(UNetModelWrapper):
             )[0]
             return -dVdx
 
+    def count_active_memories(self, x, threshold=0.01):
+        """Return (n_active_batch, n_active_total) over batch x.
+
+        n_active_batch  — mean number of prototypes with weight > threshold per sample.
+        n_active_total  — number of distinct prototypes that are argmax for any sample.
+        """
+        with torch.no_grad():
+            t_dummy = dummy_time(x, value=0.5)
+            unet_out = super().forward(t_dummy, x)
+            pooled = self.pool(unet_out).squeeze(-1).squeeze(-1)
+            q = self.query_proj(pooled)
+            logits = self.hopfield_beta * (q @ self.memories.T)
+            weights = torch.softmax(logits, dim=-1)
+            n_active_batch = (weights > threshold).float().sum(dim=-1).mean().item()
+            n_active_total = weights.argmax(dim=-1).unique().numel()
+        return n_active_batch, n_active_total
+
     def forward(self, t, x, return_potential=False, *args, **kwargs):
         if return_potential:
             return self.potential(x, t)

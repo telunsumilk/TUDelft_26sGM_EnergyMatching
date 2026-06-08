@@ -392,7 +392,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
         total_loss, f_loss, cd_loss, pos_e, neg_e = cd_step(
             model, flow_matcher, x_real_flow, x_real_cd, device
         )
-        return total_loss, {
+        log = {
             "flow":    f_loss.item(),
             "cd":      cd_loss.item(),
             "pos_min": pos_e.min().item(),
@@ -402,6 +402,11 @@ def train_phase2(model, ema_model, optimizer, scheduler,
             "neg_max": neg_e.max().item(),
             "neg_std": neg_e.std().item(),
         }
+        if FLAGS.model_type == "hopfield" and hasattr(model, "count_active_memories"):
+            n_per, n_total = model.count_active_memories(x_real_cd)
+            log["mem_per_sample"] = n_per
+            log["mem_active"] = float(n_total)
+        return total_loss, log
 
     _train_loop(
         model, ema_model, optimizer, scheduler,
