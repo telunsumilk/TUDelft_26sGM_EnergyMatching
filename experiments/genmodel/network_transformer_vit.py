@@ -592,22 +592,21 @@ class _ResBlock(nn.Module):
 
 class EBSimpleEncoderWrapper(nn.Module):
     """
-    Lightweight CNN encoder for scalar energy — no UNet decoder or skip connections.
+    Multi-scale CNN encoder for scalar energy — no UNet decoder.
 
-    The UNet backbone was designed for pixel-level diffusion output; for a scalar
-    energy the decoder and skip connections are wasted capacity.  This model uses
-    a shallow encoder (stem → strided ResBlocks → global pool) plus a direct
-    input skip connection into the energy head, then a 2-layer MLP → scalar V(x).
-
-    The direct input skip (global-pooled raw pixels concatenated to encoder features)
-    is critical: it gives ∂V/∂x a first-order path that cannot vanish through the
-    encoder, preventing the energy collapse (V(x) = constant) that occurs when
-    second-order gradients vanish through a deep CNN during flow-matching Phase 1.
+    Each encoder stage produces a feature map that is global-pooled and
+    concatenated with the next stage's features, giving the MLP head access
+    to fine-grained (early) and abstract (deep) information simultaneously.
+    This captures the benefit of UNet skip connections without a decoder.
 
     Pipeline:
-        Conv stem → [ResBlock → strided Conv] × N → ResBlock → AdaptiveAvgPool
-        ↘  raw x → AdaptiveAvgPool (input skip)
-        → cat([encoder_features, input_skip]) → Linear → SiLU → Linear → V(x)
+        raw x ──────────────────────────────────────────── pool ──┐
+        stem → ResBlock → stride → pool ────────────────────────┐ │
+                           └─ ResBlock → stride → pool ────────┐│ │
+                                          └─ ResBlock → pool ─┐││ │
+                                                               ↓↓↓ ↓
+                                                cat([s0, s1, s2, x_skip])
+                                                → Linear → SiLU → Linear → V(x)
     """
 
     def __init__(
@@ -620,19 +619,20 @@ class EBSimpleEncoderWrapper(nn.Module):
     ):
         super().__init__()
         C_in = dim[0]
-        layers = [nn.Conv2d(C_in, channels[0], 3, padding=1)]
+
+        # Build encoder as individual stages so we can tap intermediate features
+        self.stem = nn.Conv2d(C_in, channels[0], 3, padding=1)
+        self.stages = nn.ModuleList()
         for i in range(len(channels) - 1):
-            layers += [
+            self.stages.append(nn.Sequential(
                 _ResBlock(channels[i]),
                 nn.Conv2d(channels[i], channels[i + 1], 3, stride=2, padding=1),
-            ]
-        layers.append(_ResBlock(channels[-1]))
-        self.encoder = nn.Sequential(*layers)
+            ))
+        self.final_res = _ResBlock(channels[-1])
+
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        # direct input skip: pools raw pixels to (B, C_in) — guarantees a
-        # first-order gradient path so ∂V/∂x cannot fully vanish
-        self.input_pool = nn.AdaptiveAvgPool2d((1, 1))
-        mlp_in = channels[-1] + C_in
+        # mlp_in = sum of all stage output channels + raw input channels
+        mlp_in = sum(channels) + C_in
         self.mlp = nn.Sequential(
             nn.Flatten(),
             nn.Linear(mlp_in, mlp_in),
@@ -643,9 +643,18 @@ class EBSimpleEncoderWrapper(nn.Module):
         self.energy_clamp = energy_clamp
 
     def potential(self, x, t):
-        enc = self.pool(self.encoder(x)).squeeze(-1).squeeze(-1)      # (B, C_last)
-        skip = self.input_pool(x).squeeze(-1).squeeze(-1)             # (B, C_in)
-        V = self.mlp(torch.cat([enc, skip], dim=-1)).view(-1) * self.output_scale
+        # skips: [x(C_in), stem(ch[0]), stage0(ch[1]), ..., stageN-1+final_res(ch[-1])]
+        # total width = C_in + sum(channels) = mlp_in
+        skips = [self.pool(x).squeeze(-1).squeeze(-1)]           # (B, C_in)
+        h = self.stem(x)
+        skips.append(self.pool(h).squeeze(-1).squeeze(-1))       # (B, channels[0])
+        for i, stage in enumerate(self.stages):
+            h = stage(h)
+            if i == len(self.stages) - 1:
+                h = self.final_res(h)
+            skips.append(self.pool(h).squeeze(-1).squeeze(-1))   # (B, channels[i+1])
+        feat = torch.cat(skips, dim=-1)
+        V = self.mlp(feat).view(-1) * self.output_scale
         if self.energy_clamp is not None:
             V = soft_clamp(V, self.energy_clamp)
         return V
