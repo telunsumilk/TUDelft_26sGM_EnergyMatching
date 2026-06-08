@@ -214,7 +214,7 @@ def main(argv):
     # Recover training flags from the log before building the model.
     # argv contains the raw command-line arguments; extract flag names from it
     # so we know which ones were explicitly set by the user.
-    argv_flag_names = {a.lstrip("-").split("=")[0] for a in argv if a.startswith("-")}
+    argv_flag_names = {a.lstrip("-").split("=")[0] for a in sys.argv[1:] if a.startswith("-")}
     if FLAGS.checkpoint:
         apply_flags_from_log(FLAGS.checkpoint, argv_flag_names)
 
