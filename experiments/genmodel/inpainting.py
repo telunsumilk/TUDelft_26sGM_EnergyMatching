@@ -6,6 +6,11 @@ from 0 → epsilon_max following equation (3) of the paper. Observed pixels are
 enforced via a soft measurement-fidelity energy term (not hard clamping), which
 is consistent with the flow-matching trajectory used during generation.
 
+Training flags (model architecture, epsilon_max, …) are automatically read from the
+train.INFO log file in the checkpoint directory. Any flag supplied explicitly overrides
+the log. For checkpoints without a train.INFO (e.g. article weights), specify
+--model_type manually; all other architecture flags default to the paper's settings.
+
 Example:
     cd experiments/genmodel
     python inpainting.py \
@@ -15,9 +20,11 @@ Example:
         --inpaint_savedir results/inpainting
 """
 
+import ast
 import json
 import math
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -87,6 +94,61 @@ flags.DEFINE_string("input_image", "",
                     "Path to a custom image file (PNG/JPEG). "
                     "When set, --num_test_images is ignored and only this image is inpainted. "
                     "The image is resized to match the model's input resolution.")
+
+
+# ---------------------------------------------------------------------------- #
+# Auto-load flags from train.INFO
+# ---------------------------------------------------------------------------- #
+
+_RECOVER_FLAGS = [
+    "model_type",
+    "num_channels", "num_res_blocks", "channel_mult",
+    "attention_resolutions", "num_heads", "num_head_channels",
+    "dropout", "output_scale", "energy_clamp",
+    "embed_dim", "transformer_nheads", "transformer_nlayers",
+    "hopfield_memories", "hopfield_beta",
+    "epsilon_max", "time_cutoff",
+    "dataset",
+]
+
+_LOG_LINE_RE = re.compile(r'\]\s+(\w+) = (.+)$')
+
+
+def _parse_log(log_path):
+    result = {}
+    with open(log_path) as f:
+        for line in f:
+            m = _LOG_LINE_RE.search(line.rstrip())
+            if m:
+                result[m.group(1)] = m.group(2)
+    return result
+
+
+def apply_flags_from_log(checkpoint_path, argv_flags):
+    log_path = os.path.join(os.path.dirname(os.path.abspath(checkpoint_path)), "train.INFO")
+    if not os.path.isfile(log_path):
+        logging.warning(f"train.INFO not found at {log_path} — using default flags.")
+        return
+
+    logging.info(f"Reading training flags from {log_path}")
+    parsed = _parse_log(log_path)
+    applied = []
+    for name in _RECOVER_FLAGS:
+        if name in argv_flags:
+            continue
+        if name not in parsed:
+            continue
+        try:
+            raw = parsed[name]
+            if raw.startswith("[") and raw.endswith("]"):
+                raw = ",".join(str(v) for v in ast.literal_eval(raw))
+            FLAGS[name].parse(raw)
+            applied.append(f"{name}={raw}")
+        except Exception as e:
+            logging.warning(f"Could not apply {name}={parsed[name]!r} from log: {e}")
+
+    if applied:
+        logging.info(f"Recovered from train.INFO: {', '.join(applied)}")
 
 
 # ---------------------------------------------------------------------------- #
@@ -384,7 +446,13 @@ def save_params(savedir):
 
 def main(argv):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    argv_flag_names = {a.lstrip("-").split("=")[0] for a in sys.argv[1:] if a.startswith("-")}
+    if FLAGS.checkpoint:
+        apply_flags_from_log(FLAGS.checkpoint, argv_flag_names)
+
     logging.info(f"Device: {device}")
+    logging.info(f"model_type={FLAGS.model_type}  checkpoint={FLAGS.checkpoint}")
 
     model = load_model(device)
 
