@@ -675,3 +675,106 @@ class EBSimpleEncoderWrapper(nn.Module):
         if return_potential:
             return self.potential(x, t)
         return self.velocity(x, t)
+
+
+##############################################################################
+# 6) CNN encoder + Hopfield head — no UNet backbone
+##############################################################################
+class EBCNNHopfieldWrapper(nn.Module):
+    """
+    Multi-scale CNN encoder feeding a Modern Hopfield energy head.
+
+    Combines the architectural honesty of the CNN encoder (features optimised
+    directly for the energy, no UNet decoder overhead) with the explicit basin
+    structure of the Hopfield head (n_memories learnable prototype basins).
+
+    The multi-scale query gives prototypes access to both fine-grained (texture,
+    edges) and abstract (shape, pose) information simultaneously, unlike the
+    UNet-based Hopfield where the query is a single global-pooled deep feature.
+
+    Pipeline:
+        raw x → stem → [ResBlock → stride] × N → final_res
+                 pool at each scale → cat → query_proj → q (embed_dim)
+                 V(x) = -(1/β) · logsumexp(β · q · Ξᵀ)   Ξ: (n_memories, embed_dim)
+    """
+
+    def __init__(
+        self,
+        dim=(3, 32, 32),
+        channels=(64, 128, 256),
+        embed_dim=128,
+        n_memories=512,
+        hopfield_beta=8.0,
+        output_scale=1000.0,
+        energy_clamp=None,
+        **kwargs
+    ):
+        super().__init__()
+        C_in = dim[0]
+
+        self.stem = nn.Conv2d(C_in, channels[0], 3, padding=1)
+        self.stages = nn.ModuleList()
+        for i in range(len(channels) - 1):
+            self.stages.append(nn.Sequential(
+                _ResBlock(channels[i]),
+                nn.Conv2d(channels[i], channels[i + 1], 3, stride=2, padding=1),
+            ))
+        self.final_res = _ResBlock(channels[-1])
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        feat_dim = sum(channels) + C_in
+        self.query_proj = nn.Linear(feat_dim, embed_dim)
+        self.memories = nn.Parameter(torch.randn(n_memories, embed_dim) * 0.02)
+        self.hopfield_beta = hopfield_beta
+        self.output_scale = output_scale
+        self.energy_clamp = energy_clamp
+
+    def _encode(self, x):
+        """Return multi-scale concatenated feature vector (B, feat_dim)."""
+        skips = [self.pool(x).squeeze(-1).squeeze(-1)]
+        h = self.stem(x)
+        skips.append(self.pool(h).squeeze(-1).squeeze(-1))
+        for i, stage in enumerate(self.stages):
+            h = stage(h)
+            if i == len(self.stages) - 1:
+                h = self.final_res(h)
+            skips.append(self.pool(h).squeeze(-1).squeeze(-1))
+        return torch.cat(skips, dim=-1)
+
+    def potential(self, x, t):
+        feat = self._encode(x)                                    # (B, feat_dim)
+        q = self.query_proj(feat)                                 # (B, embed_dim)
+        logits = self.hopfield_beta * (q @ self.memories.T)       # (B, n_memories)
+        V = -torch.logsumexp(logits, dim=-1) / self.hopfield_beta # (B,)
+        V = V * self.output_scale
+        if self.energy_clamp is not None:
+            V = soft_clamp(V, self.energy_clamp)
+        return V
+
+    def count_active_memories(self, x, threshold=0.01):
+        """Return (n_active_batch, n_active_total) — mirrors EBHopfieldModelWrapper."""
+        with torch.no_grad():
+            feat = self._encode(x)
+            q = self.query_proj(feat)
+            logits = self.hopfield_beta * (q @ self.memories.T)
+            weights = torch.softmax(logits, dim=-1)
+            n_active_batch = (weights > threshold).float().sum(dim=-1).mean().item()
+            n_active_total = weights.argmax(dim=-1).unique().numel()
+        return n_active_batch, n_active_total
+
+    def velocity(self, x, t):
+        with torch.enable_grad():
+            x = x.clone().detach().requires_grad_(True)
+            V = self.potential(x, t)
+            dVdx = torch.autograd.grad(
+                outputs=V,
+                inputs=x,
+                grad_outputs=torch.ones_like(V),
+                create_graph=self.training
+            )[0]
+            return -dVdx
+
+    def forward(self, t, x, return_potential=False, *args, **kwargs):
+        if return_potential:
+            return self.potential(x, t)
+        return self.velocity(x, t)
