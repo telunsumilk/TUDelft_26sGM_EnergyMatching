@@ -4,16 +4,21 @@ generate.py — Standalone image generation from a pre-trained Energy Matching c
 Uses the Stratonovich Heun SDE integrator (same as FID evaluation) to generate
 images from Gaussian noise.
 
+Training flags (model architecture, epsilon_max, time_cutoff, …) are automatically
+read from the train.INFO log file in the checkpoint directory, so you only need to
+pass --checkpoint. Any flag you supply explicitly overrides the log.
+
 Example:
     cd experiments/genmodel
     python generate.py \\
         --checkpoint ../../results/genmodel_YYYYMMDD_HH/cifar10_checkpoint_phase1_final.pt \\
         --n_samples 64 \\
-        --t_end 3.0 \\
+        --t_end 3.25 \\
         --savedir results/generated
 """
 
 import os
+import re
 import sys
 
 import matplotlib
@@ -50,7 +55,7 @@ FLAGS = flags.FLAGS
 # ---------------------------------------------------------------------------- #
 flags.DEFINE_string("checkpoint", "", "Path to .pt checkpoint (required).")
 flags.DEFINE_integer("n_samples", 64, "Number of images to generate.")
-flags.DEFINE_float("t_end", 3.0, "SDE integration end time.")
+flags.DEFINE_float("t_end", 3.25, "SDE integration end time.")
 flags.DEFINE_float("dt", 0.01, "SDE step size.")
 flags.DEFINE_string("savedir", "results/generated", "Output directory.")
 flags.DEFINE_bool("save_grid", True, "Save a single image grid (grid.png).")
@@ -66,6 +71,66 @@ flags.DEFINE_bool("save_pca", True,
 flags.DEFINE_integer("pca_samples", 256, "Number of samples for the PCA trajectory.")
 flags.DEFINE_integer("pca_n_highlight", 15, "Number of individual paths to highlight in red.")
 flags.DEFINE_integer("pca_record_every", 10, "Record a PCA frame every N SDE steps.")
+
+
+# ---------------------------------------------------------------------------- #
+# Auto-load flags from train.INFO
+# ---------------------------------------------------------------------------- #
+
+# Flags we care about recovering from the log (architecture + SDE schedule).
+# Explicit command-line overrides always win.
+_RECOVER_FLAGS = [
+    "model_type",
+    "num_channels", "num_res_blocks", "channel_mult",
+    "attention_resolutions", "num_heads", "num_head_channels",
+    "dropout", "output_scale", "energy_clamp",
+    "embed_dim", "transformer_nheads", "transformer_nlayers",
+    "hopfield_memories", "hopfield_beta",
+    "epsilon_max", "time_cutoff",
+    "dataset",
+]
+
+# absl log line format:  "I0608 12:34:56.789 12345 train.py:445]   key = value"
+_LOG_LINE_RE = re.compile(r'\]\s{2}(\w+) = (.+)$')
+
+
+def _parse_log(log_path):
+    """Return dict of flag_name -> raw_string_value from a train.INFO file."""
+    result = {}
+    with open(log_path) as f:
+        for line in f:
+            m = _LOG_LINE_RE.search(line.rstrip())
+            if m:
+                result[m.group(1)] = m.group(2)
+    return result
+
+
+def apply_flags_from_log(checkpoint_path, argv_flags):
+    """
+    Look for train.INFO next to the checkpoint and apply recovered flags.
+    Flags already supplied on the command line (present in argv_flags) are
+    left untouched so explicit overrides always win.
+    """
+    log_path = os.path.join(os.path.dirname(os.path.abspath(checkpoint_path)), "train.INFO")
+    if not os.path.isfile(log_path):
+        logging.warning(f"train.INFO not found at {log_path} — using default flags.")
+        return
+
+    parsed = _parse_log(log_path)
+    applied = []
+    for name in _RECOVER_FLAGS:
+        if name in argv_flags:
+            continue  # explicit override, skip
+        if name not in parsed:
+            continue
+        try:
+            FLAGS[name].parse(parsed[name])
+            applied.append(f"{name}={parsed[name]}")
+        except Exception as e:
+            logging.warning(f"Could not apply {name}={parsed[name]!r} from log: {e}")
+
+    if applied:
+        logging.info(f"Recovered from train.INFO: {', '.join(applied)}")
 
 
 # ---------------------------------------------------------------------------- #
@@ -145,7 +210,17 @@ def generate(model, device):
 # ---------------------------------------------------------------------------- #
 def main(argv):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Recover training flags from the log before building the model.
+    # argv contains the raw command-line arguments; extract flag names from it
+    # so we know which ones were explicitly set by the user.
+    argv_flag_names = {a.lstrip("-").split("=")[0] for a in argv if a.startswith("-")}
+    if FLAGS.checkpoint:
+        apply_flags_from_log(FLAGS.checkpoint, argv_flag_names)
+
     logging.info(f"Device: {device}")
+    logging.info(f"model_type={FLAGS.model_type}  epsilon_max={FLAGS.epsilon_max}  "
+                 f"time_cutoff={FLAGS.time_cutoff}  t_end={FLAGS.t_end}")
 
     model = load_model(device)
     os.makedirs(FLAGS.savedir, exist_ok=True)
@@ -189,7 +264,6 @@ def main(argv):
         plot_pca_trajectories(frames_pca, n_highlight=FLAGS.pca_n_highlight, savepath=pca_path)
         logging.info(f"PCA trajectory saved to {pca_path}")
 
-        # Companion image grid for the highlighted PCA samples
         stride = max(1, len(frames_pca) // 10)
         frames_pca_grid = [(t, imgs[:FLAGS.pca_n_highlight]) for t, imgs in frames_pca[::stride]]
         pca_grid_path = os.path.join(FLAGS.savedir, "pca_trajectory_grid.png")
