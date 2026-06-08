@@ -91,7 +91,7 @@ _RECOVER_FLAGS = [
 ]
 
 # absl log line format:  "I0608 12:34:56.789 12345 train.py:445]   key = value"
-_LOG_LINE_RE = re.compile(r'\]\s{2}(\w+) = (.+)$')
+_LOG_LINE_RE = re.compile(r'\]\s+(\w+) = (.+)$')
 
 
 def _parse_log(log_path):
