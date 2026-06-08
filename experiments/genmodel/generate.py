@@ -17,6 +17,7 @@ Example:
         --savedir results/generated
 """
 
+import ast
 import os
 import re
 import sys
@@ -125,8 +126,13 @@ def apply_flags_from_log(checkpoint_path, argv_flags):
         if name not in parsed:
             continue
         try:
-            FLAGS[name].parse(parsed[name])
-            applied.append(f"{name}={parsed[name]}")
+            raw = parsed[name]
+            # absl logs list flags as Python repr e.g. "['1', '2', '2', '2']"
+            # but DEFINE_list.parse() expects CSV "1,2,2,2"
+            if raw.startswith("[") and raw.endswith("]"):
+                raw = ",".join(str(v) for v in ast.literal_eval(raw))
+            FLAGS[name].parse(raw)
+            applied.append(f"{name}={raw}")
         except Exception as e:
             logging.warning(f"Could not apply {name}={parsed[name]!r} from log: {e}")
 
