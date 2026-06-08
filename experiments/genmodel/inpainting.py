@@ -14,6 +14,7 @@ Example:
         --inpaint_savedir results/inpainting
 """
 
+import json
 import math
 import os
 import sys
@@ -314,6 +315,28 @@ def load_image(path, device):
 # ---------------------------------------------------------------------------- #
 # Entry point
 # ---------------------------------------------------------------------------- #
+def save_params(savedir):
+    params = {
+        "checkpoint": FLAGS.checkpoint,
+        "input_image": FLAGS.input_image,
+        "mask_type": FLAGS.mask_type,
+        "mask_fraction": FLAGS.mask_fraction,
+        "num_chains": FLAGS.num_chains,
+        "n_inpaint_steps": FLAGS.n_inpaint_steps,
+        "dt_inpaint": FLAGS.dt_inpaint,
+        "epsilon_inpaint": FLAGS.epsilon_inpaint,
+        "interaction_sigma": FLAGS.interaction_sigma,
+        "interaction_mask_fraction": FLAGS.interaction_mask_fraction,
+        "num_test_images": FLAGS.num_test_images,
+        "model_type": FLAGS.model_type,
+    }
+    os.makedirs(savedir, exist_ok=True)
+    path = os.path.join(savedir, "params.json")
+    with open(path, "w") as f:
+        json.dump(params, f, indent=2)
+    logging.info(f"Parameters saved to {path}")
+
+
 def main(argv):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logging.info(f"Device: {device}")
@@ -322,6 +345,7 @@ def main(argv):
 
     savedir = FLAGS.inpaint_savedir
     logging.info(f"Saving results to: {os.path.abspath(savedir)}")
+    save_params(savedir)
 
     if FLAGS.input_image:
         if not os.path.isfile(FLAGS.input_image):
