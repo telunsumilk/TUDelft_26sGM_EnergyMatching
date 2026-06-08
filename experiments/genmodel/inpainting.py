@@ -57,8 +57,13 @@ flags.DEFINE_float("mask_fraction", 0.5,
 flags.DEFINE_integer("num_chains", 4, "Parallel Langevin chains per image.")
 flags.DEFINE_integer("n_inpaint_steps", 200, "Langevin steps per image.")
 flags.DEFINE_float("dt_inpaint", 0.01, "Langevin step size.")
-flags.DEFINE_float("epsilon_inpaint", 0.01,
-                   "Noise scale ε; per-step noise std = sqrt(2·dt·ε).")
+flags.DEFINE_float("epsilon_inpaint", 0.05,
+                   "Max noise scale ε at the start of Langevin sampling (annealed toward epsilon_inpaint_min).")
+flags.DEFINE_float("epsilon_inpaint_min", 0.0,
+                   "Min noise scale ε at the end of Langevin sampling. "
+                   "0.0 = pure gradient descent at the final steps.")
+flags.DEFINE_enum("epsilon_schedule", "cosine", ["constant", "linear", "cosine"],
+                  "Annealing schedule for epsilon: cosine (smooth), linear, or constant (no annealing).")
 flags.DEFINE_float(
     "interaction_sigma", 0.0,
     "σ for inter-chain interaction energy strength. "
@@ -215,7 +220,11 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
     """
     N = FLAGS.num_chains
     dt = FLAGS.dt_inpaint
-    noise_std = math.sqrt(2.0 * dt * FLAGS.epsilon_inpaint)
+    eps_max = FLAGS.epsilon_inpaint
+    eps_min = FLAGS.epsilon_inpaint_min
+    schedule = FLAGS.epsilon_schedule
+    N_steps = FLAGS.n_inpaint_steps
+    logging.info(f"Epsilon annealing ({schedule}): {eps_max:.4f} → {eps_min:.5f}")
     sigma = FLAGS.interaction_sigma
 
     # Repeat observed image across all chains: (N, C, H, W)
@@ -235,7 +244,16 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
 
     snapshots = {}  # step -> (N, C, H, W) tensor
 
-    for step in range(FLAGS.n_inpaint_steps):
+    for step in range(N_steps):
+        frac = step / max(N_steps - 1, 1)  # 0.0 at start → 1.0 at end
+        if schedule == "cosine":
+            epsilon_t = eps_min + 0.5 * (eps_max - eps_min) * (1.0 + math.cos(math.pi * frac))
+        elif schedule == "linear":
+            epsilon_t = eps_max * (1.0 - frac) + eps_min * frac
+        else:  # constant
+            epsilon_t = eps_max
+        noise_std = math.sqrt(2.0 * dt * epsilon_t)
+
         with torch.no_grad():
             # model.velocity = -∇V; uses enable_grad internally so no_grad is safe
             grad_V = -model.velocity(x, t_dummy)  # (N, C, H, W)
@@ -259,7 +277,7 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
             x = x.clamp(-1.0, 1.0)
 
         if (step + 1) % 100 == 0:
-            logging.info(f"  step {step + 1}/{FLAGS.n_inpaint_steps}")
+            logging.info(f"  step {step + 1}/{N_steps}  ε={epsilon_t:.4f}")
             snapshots[step + 1] = x.detach().cpu()
 
     return x, snapshots
@@ -325,6 +343,8 @@ def save_params(savedir):
         "n_inpaint_steps": FLAGS.n_inpaint_steps,
         "dt_inpaint": FLAGS.dt_inpaint,
         "epsilon_inpaint": FLAGS.epsilon_inpaint,
+        "epsilon_inpaint_min": FLAGS.epsilon_inpaint_min,
+        "epsilon_schedule": FLAGS.epsilon_schedule,
         "interaction_sigma": FLAGS.interaction_sigma,
         "interaction_mask_fraction": FLAGS.interaction_mask_fraction,
         "num_test_images": FLAGS.num_test_images,
