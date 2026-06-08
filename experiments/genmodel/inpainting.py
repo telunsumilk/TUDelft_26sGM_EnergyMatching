@@ -1,8 +1,10 @@
 """
-inpainting.py — Energy Matching inpainting demo (paper Section 3.2, Algorithm 3).
+inpainting.py — Energy Matching inpainting (paper Section 3.2, Algorithm 3).
 
-Runs Langevin sampling conditioned on observed pixels (hard constraint) with
-optional interaction energy between chains for diverse completions.
+Implements Algorithm 3 exactly: sweeps t from 0 → tau_s with ε(t) increasing
+from 0 → epsilon_max following equation (3) of the paper. Observed pixels are
+enforced via a soft measurement-fidelity energy term (not hard clamping), which
+is consistent with the flow-matching trajectory used during generation.
 
 Example:
     cd experiments/genmodel
@@ -10,7 +12,6 @@ Example:
         --checkpoint ../../results/genmodel_YYYYMMDD_HH/cifar10_checkpoint_phase1_final.pt \
         --mask_type center \
         --num_chains 4 \
-        --n_inpaint_steps 300 \
         --inpaint_savedir results/inpainting
 """
 
@@ -55,18 +56,20 @@ flags.DEFINE_float("mask_fraction", 0.5,
                    "For mask_type=center: side length of the square block as a fraction of H/W. "
                    "For mask_type=random: fraction of total pixels to mask.")
 flags.DEFINE_integer("num_chains", 4, "Parallel Langevin chains per image.")
-flags.DEFINE_integer("n_inpaint_steps", 1000, "Langevin steps per image.")
-flags.DEFINE_float("dt_inpaint", 0.001, "Langevin step size (default: 0.001 → total chain time = 1.0 at n_inpaint_steps=1000).")
-flags.DEFINE_float("t_inpaint", 1.0,
-                   "Model time t at which the energy is evaluated during Langevin sampling. "
-                   "1.0 matches the Phase 2 CD training point where the energy is best calibrated.")
+flags.DEFINE_float("tau_s_inpaint", 3.25,
+                   "Sampling end-time τ_s. Chain runs from t=0 to t=tau_s. "
+                   "Paper empirically observes FID plateaus at τ_s≈3.25 for CIFAR-10.")
+flags.DEFINE_float("tau_star_inpaint", 1.0,
+                   "Warm-up cutoff τ* from eq. (3). ε=0 for t<τ*, increases linearly "
+                   "to epsilon_inpaint for τ*≤t≤1, then held at epsilon_inpaint for t>1.")
+flags.DEFINE_float("dt_inpaint", 0.01,
+                   "Langevin step size Δt. Steps = tau_s / dt (e.g. 325 at defaults).")
 flags.DEFINE_float("epsilon_inpaint", 0.05,
-                   "Max noise scale ε at the start of Langevin sampling (annealed toward epsilon_inpaint_min).")
-flags.DEFINE_float("epsilon_inpaint_min", 0.0,
-                   "Min noise scale ε at the end of Langevin sampling. "
-                   "0.0 = pure gradient descent at the final steps.")
-flags.DEFINE_enum("epsilon_schedule", "cosine", ["constant", "linear", "cosine"],
-                  "Annealing schedule for epsilon: cosine (smooth), linear, or constant (no annealing).")
+                   "Maximum noise scale ε_max reached at t=1. Matches epsilon_max from training.")
+flags.DEFINE_float("zeta_inpaint", 0.1,
+                   "Measurement noise ζ controlling fidelity strength. "
+                   "Smaller = stronger pull toward observed values. "
+                   "The fidelity gradient is 2ε/ζ² · mask · (y - x).")
 flags.DEFINE_float(
     "interaction_sigma", 0.0,
     "σ for inter-chain interaction energy strength. "
@@ -204,86 +207,103 @@ def make_interaction_mask(inpaint_mask):
 
 
 # ---------------------------------------------------------------------------- #
+# ε schedule — equation (3) from the paper
+# ---------------------------------------------------------------------------- #
+def epsilon_at(t, eps_max, tau_star):
+    """
+    ε(t) from eq. (3):
+      0             for t < tau_star
+      linearly 0→eps_max  for tau_star ≤ t ≤ 1
+      eps_max       for t > 1
+    """
+    if t < tau_star:
+        return 0.0
+    if t <= 1.0:
+        return eps_max * (t - tau_star) / max(1.0 - tau_star, 1e-8)
+    return eps_max
+
+
+# ---------------------------------------------------------------------------- #
 # Langevin inpainting (Algorithm 3 from the paper)
 # ---------------------------------------------------------------------------- #
 def run_inpainting(x_orig, inpaint_mask, model, device):
     """
-    x_orig: (C, H, W) in [-1, 1]
+    x_orig:       (C, H, W) in [-1, 1]
     inpaint_mask: (H, W) bool, True = pixel to inpaint
 
     Returns (num_chains, C, H, W) with diverse completions.
 
-    Each Langevin step:
-        grad = ∇V(x) [+ interaction term if B is not None]
-        x = x - dt·grad + sqrt(2·dt·ε)·N(0,I)
-        x[observed] = y_obs[observed]   # hard constraint
-    Interaction energy (paper eq.): W(xi,xj) = -||B(xi-xj)||²/σ²
-    where B is a sub-region of the inpainted area (see make_interaction_mask).
-    Smaller sigma = stronger interaction; sigma must be > 0 when B is enabled.
+    Follows Algorithm 3 exactly:
+      - t sweeps from 0 → tau_s (same as generation)
+      - ε(t) increases 0 → epsilon_inpaint following eq. (3)
+      - Observed pixels enforced via soft measurement fidelity:
+            U(x) = V(x) + ε/ζ² · ||y - A(x)||²
+        giving an extra gradient term: +2ε/ζ² · mask_obs · (y - x)
+      - Optional interaction energy for diverse completions
     """
     N = FLAGS.num_chains
     dt = FLAGS.dt_inpaint
+    tau_s = FLAGS.tau_s_inpaint
+    tau_star = FLAGS.tau_star_inpaint
     eps_max = FLAGS.epsilon_inpaint
-    eps_min = FLAGS.epsilon_inpaint_min
-    schedule = FLAGS.epsilon_schedule
-    N_steps = FLAGS.n_inpaint_steps
-    logging.info(
-        f"Langevin: {N_steps} steps × dt={dt} = T={N_steps * dt:.2f}  "
-        f"t_model={FLAGS.t_inpaint}  ε {eps_max:.4f}→{eps_min:.4f} ({schedule})"
-    )
+    zeta = FLAGS.zeta_inpaint
     sigma = FLAGS.interaction_sigma
 
-    # Repeat observed image across all chains: (N, C, H, W)
+    N_steps = max(1, int(round(tau_s / dt)))
+    logging.info(
+        f"Langevin: {N_steps} steps × dt={dt} = T={N_steps * dt:.2f}  "
+        f"tau_star={tau_star}  ε 0→{eps_max}  ζ={zeta}"
+    )
+
+    # Observed values repeated across chains: (N, C, H, W)
     y_obs = x_orig.unsqueeze(0).expand(N, -1, -1, -1).clone().to(device)
 
-    # Initialise: observed pixels from y_obs, masked region from N(0,1)
-    mask4 = inpaint_mask.unsqueeze(0).unsqueeze(0)   # (1, 1, H, W)
-    x = torch.where(mask4, torch.randn_like(y_obs), y_obs)
+    # All chains start from Gaussian noise (full image, including observed pixels).
+    # The measurement fidelity term will pull observed pixels toward y_obs.
+    x = torch.randn_like(y_obs)
 
-    obs4 = (~inpaint_mask).unsqueeze(0).unsqueeze(0)  # (1, 1, H, W) True = observed
-    t_dummy = torch.full((N,), FLAGS.t_inpaint, device=device)
+    # obs_mask4: (1, 1, H, W) float — 1 at observed pixels, 0 at masked pixels
+    obs_mask4 = (~inpaint_mask).float().unsqueeze(0).unsqueeze(0)  # (1,1,H,W)
 
     # Interaction mask B: sub-region of the inpainted area where diversity is encouraged.
-    # interaction_mask_fraction=1.0 → full mask; 0.0 → disabled; intermediate → inner crop.
     B_2d = make_interaction_mask(inpaint_mask) if sigma > 0.0 else None
     B = B_2d.unsqueeze(0).unsqueeze(0) if B_2d is not None else None  # (1,1,H,W)
 
     snapshots = {}  # step -> (N, C, H, W) tensor
 
     for step in range(N_steps):
-        frac = step / max(N_steps - 1, 1)  # 0.0 at start → 1.0 at end
-        if schedule == "cosine":
-            epsilon_t = eps_min + 0.5 * (eps_max - eps_min) * (1.0 + math.cos(math.pi * frac))
-        elif schedule == "linear":
-            epsilon_t = eps_max * (1.0 - frac) + eps_min * frac
-        else:  # constant
-            epsilon_t = eps_max
-        noise_std = math.sqrt(2.0 * dt * epsilon_t)
+        t = step * dt
+        epsilon_t = epsilon_at(t, eps_max, tau_star)
+        noise_std = math.sqrt(2.0 * dt * epsilon_t) if epsilon_t > 0.0 else 0.0
+
+        t_tensor = torch.full((N,), t, device=device)
 
         with torch.no_grad():
-            # model.velocity = -∇V; uses enable_grad internally so no_grad is safe
-            grad_V = -model.velocity(x, t_dummy)  # (N, C, H, W)
+            # grad_V = ∇V(x) = -velocity(x, t)
+            grad_V = -model.velocity(x, t_tensor)  # (N, C, H, W)
 
-            if B is not None:
-                # Interaction gradient: ∇E_int_i = -(2/σ²)·B·Σ_{j≠i}(xi-xj)
-                #                               = -(2/σ²)·B·N·(xi - x_mean)
-                # B is the interaction sub-region (⊆ inpaint mask); only pixels
-                # inside B are pushed apart across chains → diverse completions.
-                # NOTE: follows the paper's raw formulation. Scaling can be tricky —
-                # interaction magnitude depends on image scale, number of chains, and
-                # gradient magnitude, so sigma needs empirical tuning.
-                x_mean = x.mean(dim=0, keepdim=True)
-                interaction = (2.0 / sigma ** 2) * B * N * (x - x_mean)
-                effective_grad = grad_V - interaction
+            # Measurement fidelity gradient: -∇_x [ε/ζ² · ||y - A(x)||²]
+            #   = +2ε/ζ² · obs_mask · (y_obs - x)
+            # Subtracted from grad_V because Langevin step is x -= dt * ∇U
+            if epsilon_t > 0.0 and zeta > 0.0:
+                fidelity_grad = -(2.0 * epsilon_t / zeta ** 2) * obs_mask4 * (y_obs - x)
+                effective_grad = grad_V + fidelity_grad
             else:
                 effective_grad = grad_V
 
-            x = x - dt * effective_grad + noise_std * torch.randn_like(x)
-            x = torch.where(obs4, y_obs, x)  # hard constraint on observed pixels
+            if B is not None:
+                # Interaction: ∇E_int_i = -(2/σ²)·B·N·(xi - x_mean)
+                x_mean = x.mean(dim=0, keepdim=True)
+                interaction = (2.0 / sigma ** 2) * B * N * (x - x_mean)
+                effective_grad = effective_grad - interaction
+
+            x = x - dt * effective_grad
+            if noise_std > 0.0:
+                x = x + noise_std * torch.randn_like(x)
             x = x.clamp(-1.0, 1.0)
 
         if (step + 1) % 100 == 0:
-            logging.info(f"  step {step + 1}/{N_steps}  ε={epsilon_t:.4f}")
+            logging.info(f"  step {step + 1}/{N_steps}  t={t:.3f}  ε={epsilon_t:.4f}")
             snapshots[step + 1] = x.detach().cpu()
 
     return x, snapshots
@@ -327,7 +347,6 @@ def save_snapshots(x_orig, inpaint_mask, snapshots, savedir, idx):
 def load_image(path, device):
     """Load any PNG/JPEG, resize to the model's input size, normalize to [-1, 1]."""
     img = Image.open(path).convert("RGB")
-    # model input is 32×32 for CIFAR-10 checkpoints; adjust dim in build_model for other sizes
     transform = T.Compose([
         T.Resize((32, 32)),
         T.ToTensor(),
@@ -346,12 +365,11 @@ def save_params(savedir):
         "mask_type": FLAGS.mask_type,
         "mask_fraction": FLAGS.mask_fraction,
         "num_chains": FLAGS.num_chains,
-        "n_inpaint_steps": FLAGS.n_inpaint_steps,
+        "tau_s_inpaint": FLAGS.tau_s_inpaint,
+        "tau_star_inpaint": FLAGS.tau_star_inpaint,
         "dt_inpaint": FLAGS.dt_inpaint,
-        "t_inpaint": FLAGS.t_inpaint,
         "epsilon_inpaint": FLAGS.epsilon_inpaint,
-        "epsilon_inpaint_min": FLAGS.epsilon_inpaint_min,
-        "epsilon_schedule": FLAGS.epsilon_schedule,
+        "zeta_inpaint": FLAGS.zeta_inpaint,
         "interaction_sigma": FLAGS.interaction_sigma,
         "interaction_mask_fraction": FLAGS.interaction_mask_fraction,
         "num_test_images": FLAGS.num_test_images,
