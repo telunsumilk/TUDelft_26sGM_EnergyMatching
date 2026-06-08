@@ -81,7 +81,9 @@ def define_flags():
     # ------------------------------------------------------------------ #
     flags.DEFINE_integer("phase1_steps", 145000,
                          "Phase 1 training steps. (ImageNet32 default: 640000)")
-    flags.DEFINE_float("phase1_ema_decay", 0.9999, "EMA decay factor during Phase 1.")
+    flags.DEFINE_float("phase1_ema_decay", -1.0,
+                     "EMA decay factor during Phase 1. "
+                     "-1 = auto: exp(-10 / phase1_steps), e.g. 0.9993 at 15K, 0.99993 at 145K.")
     flags.DEFINE_bool("use_flow_weight", True,
                       "Apply time-dependent flow loss weighting. Set False for ImageNet32.")
     flags.DEFINE_float("time_cutoff", 1.0,
@@ -91,7 +93,9 @@ def define_flags():
     # Phase 2 (OT flow + Contrastive Divergence)
     # ------------------------------------------------------------------ #
     flags.DEFINE_integer("phase2_steps", 2000, "Phase 2 training steps.")
-    flags.DEFINE_float("phase2_ema_decay", 0.99, "EMA decay factor during Phase 2.")
+    flags.DEFINE_float("phase2_ema_decay", -1.0,
+                     "EMA decay factor during Phase 2. "
+                     "-1 = auto: exp(-10 / phase2_steps).")
     flags.DEFINE_float("lambda_cd", 0.0, "CD loss coefficient (0 = Phase 1 only).")
     flags.DEFINE_integer("n_gibbs", 0, "MCMC steps for negative sample generation.")
     flags.DEFINE_float("dt_gibbs", 0.01, "Step size for Gibbs / SDE sampling.")

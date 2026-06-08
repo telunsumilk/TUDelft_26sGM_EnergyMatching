@@ -20,6 +20,7 @@ Resume from phase1_final checkpoint (skip Phase 1):
 """
 
 import copy
+import math
 import os
 import sys
 import time
@@ -337,13 +338,22 @@ def _periodic_save(model, ema_model, optimizer, scheduler,
 # Phase wrappers
 # =========================================================================== #
 
+def _resolve_ema_decay(flag_value, n_steps):
+    """Return flag_value if explicitly set, else auto-compute exp(-10 / n_steps)."""
+    if flag_value >= 0.0:
+        return flag_value
+    decay = math.exp(-10.0 / n_steps)
+    logging.info(f"EMA decay auto-computed: exp(-10 / {n_steps}) = {decay:.6f}")
+    return decay
+
+
 def train_phase1(model, ema_model, optimizer, scheduler,
                  datalooper, flow_matcher, device, savedir,
                  scaler=None, amp_dtype=None):
     """Phase 1 — OT flow matching (Algorithm 1)."""
     logging.info(
         f"=== Phase 1: {FLAGS.phase1_steps} steps, "
-        f"ema_decay={FLAGS.phase1_ema_decay}, "
+        f"ema_decay={_resolve_ema_decay(FLAGS.phase1_ema_decay, FLAGS.phase1_steps):.6f}, "
         f"use_flow_weight={FLAGS.use_flow_weight} ==="
     )
 
@@ -357,7 +367,7 @@ def train_phase1(model, ema_model, optimizer, scheduler,
         step_fn, datalooper,
         total_steps=FLAGS.phase1_steps,
         start_step=0,
-        ema_decay=FLAGS.phase1_ema_decay,
+        ema_decay=_resolve_ema_decay(FLAGS.phase1_ema_decay, FLAGS.phase1_steps),
         device=device,
         savedir=savedir,
         phase_tag="phase1",
@@ -372,7 +382,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
     """Phase 2 — OT flow + Contrastive Divergence (Algorithm 2)."""
     logging.info(
         f"=== Phase 2: {FLAGS.phase2_steps} steps, "
-        f"ema_decay={FLAGS.phase2_ema_decay}, "
+        f"ema_decay={_resolve_ema_decay(FLAGS.phase2_ema_decay, FLAGS.phase2_steps):.6f}, "
         f"lambda_cd={FLAGS.lambda_cd}, n_gibbs={FLAGS.n_gibbs} ==="
     )
 
@@ -398,7 +408,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
         step_fn, datalooper,
         total_steps=FLAGS.phase2_steps,
         start_step=FLAGS.phase1_steps,
-        ema_decay=FLAGS.phase2_ema_decay,
+        ema_decay=_resolve_ema_decay(FLAGS.phase2_ema_decay, FLAGS.phase2_steps),
         device=device,
         savedir=savedir,
         phase_tag="phase2",
