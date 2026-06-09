@@ -41,8 +41,8 @@ from utils_cifar_imagenet import (
     generate_samples,
     gibbs_sampling_time_sweep,
     infiniteloop,
+    make_lr_lambda,
     save_pos_neg_grids,
-    warmup_lr,
 )
 from network_transformer_vit import (
     EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper,
@@ -123,9 +123,9 @@ def build_model(device):
     return model, ema_model
 
 
-def build_optimizer(model):
+def build_optimizer(model, total_steps):
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.lr, betas=(0.9, 0.95))
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=make_lr_lambda(total_steps))
     return optimizer, scheduler
 
 
@@ -465,7 +465,8 @@ def main(argv):
     datalooper = infiniteloop(dataloader)
 
     model, ema_model = build_model(device)
-    optimizer, scheduler = build_optimizer(model)
+    total_steps = FLAGS.phase1_steps + FLAGS.phase2_steps
+    optimizer, scheduler = build_optimizer(model, total_steps)
     load_checkpoint(model, ema_model, optimizer, scheduler, device)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
