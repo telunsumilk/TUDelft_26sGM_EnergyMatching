@@ -36,10 +36,8 @@ config.define_flags()
 
 from network_transformer_vit import (
     EBAttnModelWrapper,
-    EBCNNHopfieldWrapper,
     EBHopfieldModelWrapper,
     EBMLPModelWrapper,
-    EBSimpleEncoderWrapper,
     EBViTModelWrapper,
 )
 from fid import (
@@ -179,21 +177,6 @@ def build_model(device):
             n_memories=FLAGS.hopfield_memories,
             embed_dim=FLAGS.embed_dim,
             hopfield_beta=FLAGS.hopfield_beta,
-        ).to(device)
-    if FLAGS.model_type == "cnn":
-        return EBSimpleEncoderWrapper(
-            dim=common["dim"],
-            output_scale=common["output_scale"],
-            energy_clamp=common["energy_clamp"],
-        ).to(device)
-    if FLAGS.model_type == "cnn_hopfield":
-        return EBCNNHopfieldWrapper(
-            dim=common["dim"],
-            embed_dim=FLAGS.embed_dim,
-            n_memories=FLAGS.hopfield_memories,
-            hopfield_beta=FLAGS.hopfield_beta,
-            output_scale=common["output_scale"],
-            energy_clamp=common["energy_clamp"],
         ).to(device)
     return EBMLPModelWrapper(**common).to(device)
 

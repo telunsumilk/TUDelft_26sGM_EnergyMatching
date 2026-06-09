@@ -46,7 +46,7 @@ from utils_cifar_imagenet import (
 )
 from network_transformer_vit import (
     EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper,
-    EBHopfieldModelWrapper, EBSimpleEncoderWrapper, EBCNNHopfieldWrapper,
+    EBHopfieldModelWrapper,
 )
 
 
@@ -115,21 +115,6 @@ def build_model(device):
             n_memories=FLAGS.hopfield_memories,
             embed_dim=FLAGS.embed_dim,
             hopfield_beta=FLAGS.hopfield_beta,
-        )
-    elif FLAGS.model_type == "cnn":
-        model = EBSimpleEncoderWrapper(
-            dim=common["dim"],
-            output_scale=common["output_scale"],
-            energy_clamp=common["energy_clamp"],
-        )
-    elif FLAGS.model_type == "cnn_hopfield":
-        model = EBCNNHopfieldWrapper(
-            dim=common["dim"],
-            embed_dim=FLAGS.embed_dim,
-            n_memories=FLAGS.hopfield_memories,
-            hopfield_beta=FLAGS.hopfield_beta,
-            output_scale=common["output_scale"],
-            energy_clamp=common["energy_clamp"],
         )
     else:  # mlp
         model = EBMLPModelWrapper(**common)
@@ -411,7 +396,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
             "neg_max": neg_e.max().item(),
             "neg_std": neg_e.std().item(),
         }
-        if FLAGS.model_type in ("hopfield", "cnn_hopfield") and hasattr(model, "count_active_memories"):
+        if FLAGS.model_type == "hopfield" and hasattr(model, "count_active_memories"):
             n_per, n_total = model.count_active_memories(x_real_cd)
             log["mem_per_sample"] = n_per
             log["mem_active"] = float(n_total)

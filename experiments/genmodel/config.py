@@ -16,9 +16,9 @@ def define_flags():
     flags.DEFINE_string("model", "genmodel", "Model name prefix for timestamped output dir.")
     flags.DEFINE_string("output_dir", "../../results/", "Root directory for run outputs.")
     flags.DEFINE_string("my_log_dir", "", "Override directory for absl log files.")
-    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp", "hopfield", "cnn", "cnn_hopfield"],
+    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp", "hopfield"],
                       "Head architecture: vit (full Transformer), attn (single MHA layer), mlp (global-pool MLP), "
-                      "hopfield (Hopfield energy head on UNet backbone), cnn (lightweight encoder, no UNet).")
+                      "hopfield (Hopfield energy head on UNet backbone).")
 
     # ------------------------------------------------------------------ #
     # UNet architecture
