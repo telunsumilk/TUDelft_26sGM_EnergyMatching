@@ -490,8 +490,11 @@ def main(argv):
     # ------------------------------------------------------------------ #
     if not FLAGS.skip_phase2:
         # Reset optimizer LR for phase 2 — phase 1 cosine has decayed to ~0.
+        # Must set both 'lr' and 'initial_lr': LambdaLR reads initial_lr as
+        # its base_lr and would otherwise inherit the phase 1 peak (2e-3).
         for pg in optimizer.param_groups:
             pg['lr'] = FLAGS.phase2_lr
+            pg['initial_lr'] = FLAGS.phase2_lr
         scheduler = torch.optim.lr_scheduler.LambdaLR(
             optimizer, lr_lambda=lambda step: 1.0
         )
