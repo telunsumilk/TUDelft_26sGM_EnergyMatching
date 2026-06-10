@@ -153,10 +153,18 @@ def simulate_image_trajectory_dense(model, x_init, t_end, dt=0.01, record_every=
     with torch.no_grad():
         x_sol = torchsde.sdeint(sde, x_flat, ts, method="heun", dt=dt)
 
-    return [
-        (float(ts[i]), x_sol[i].view(*orig_shape).clamp(-1.0, 1.0).cpu())
-        for i in range(len(ts))
-    ]
+    frames = []
+    for i in range(len(ts)):
+        img = x_sol[i].view(*orig_shape).cpu()
+        if img.isnan().any():
+            n_nan = img.isnan().any(dim=(1, 2, 3)).sum().item()
+            logging.warning(
+                f"simulate_image_trajectory_dense: {n_nan}/{B} samples have NaN "
+                f"at t={float(ts[i]):.3f} — replacing with zeros."
+            )
+            img = torch.nan_to_num(img, nan=0.0)
+        frames.append((float(ts[i]), img.clamp(-1.0, 1.0)))
+    return frames
 
 
 def plot_pca_trajectories(frames, n_highlight=10, savepath=None):
@@ -181,6 +189,10 @@ def plot_pca_trajectories(frames, n_highlight=10, savepath=None):
     # Flatten every frame to (B, D) and stack → (n_times * B, D)
     flat = [imgs.view(B, -1).numpy() for _, imgs in frames]
     all_points = np.concatenate(flat, axis=0)
+
+    if np.isnan(all_points).any():
+        logging.warning("plot_pca_trajectories: NaN in trajectory data — skipping PCA plot.")
+        return
 
     pca = PCA(n_components=2)
     all_2d = pca.fit_transform(all_points)          # (n_times * B, 2)
