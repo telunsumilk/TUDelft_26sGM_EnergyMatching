@@ -70,7 +70,8 @@ def define_flags():
     # ------------------------------------------------------------------ #
     # Optimizer / scheduler
     # ------------------------------------------------------------------ #
-    flags.DEFINE_float("lr", 2e-3, "Peak learning rate. With cosine decay: 2e-3. Flat schedule: 1.2e-3. (ImageNet32 default: 6e-4)")
+    flags.DEFINE_float("lr", 2e-3, "Peak learning rate for phase 1. With cosine decay: 2e-3. Flat schedule: 1.2e-3. (ImageNet32 default: 6e-4)")
+    flags.DEFINE_float("phase2_lr", 1e-4, "Learning rate for phase 2 CD training (reset after phase 1 cosine decay).")
     flags.DEFINE_bool("lr_cosine_decay", True,
                       "Cosine decay after warmup (recommended). False = flat LR after warmup.")
     flags.DEFINE_float("grad_clip", 1.0, "Gradient norm clipping threshold.")
