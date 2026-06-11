@@ -288,6 +288,12 @@ def _train_loop(
             scheduler.step()
             ema(model, ema_model, ema_decay)
 
+            if not math.isfinite(loss.item()):
+                logging.error(
+                    f"[{phase_tag} step {step}] loss={loss.item()} — stopping early."
+                )
+                break
+
             if step % log_every == 0:
                 now = time.time()
                 elapsed = now - last_log_time
