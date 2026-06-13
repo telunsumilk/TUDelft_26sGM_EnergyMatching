@@ -522,20 +522,21 @@ def warmup_lr(step):
     return min(step, FLAGS.warmup) / FLAGS.warmup
 
 
-def make_lr_lambda(total_steps):
+def make_lr_lambda(total_steps, warmup=None):
     """
     Returns a LambdaLR-compatible function.
 
-    With lr_cosine_decay=True (default): linear warmup over FLAGS.warmup steps,
-    then cosine decay from peak LR down to 0 over the remaining steps.
+    With lr_cosine_decay=True (default): linear warmup over warmup steps
+    (defaults to FLAGS.warmup), then cosine decay from peak LR down to 0.
     With lr_cosine_decay=False: linear warmup then flat (original behaviour).
+    Pass warmup=0 for phase 2 (no warmup, pure cosine from step 0).
     """
-    warmup = FLAGS.warmup
+    warmup_steps = FLAGS.warmup if warmup is None else warmup
     if FLAGS.lr_cosine_decay:
         def lr_lambda(step):
-            if step < warmup:
-                return step / max(1, warmup)
-            progress = (step - warmup) / max(1, total_steps - warmup)
+            if warmup_steps > 0 and step < warmup_steps:
+                return step / max(1, warmup_steps)
+            progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
             progress = min(progress, 1.0)
             return 0.5 * (1.0 + math.cos(math.pi * progress))
         return lr_lambda
