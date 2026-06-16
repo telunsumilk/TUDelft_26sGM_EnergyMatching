@@ -174,14 +174,45 @@ python train.py \
   --fid_num_gen=50000 \
   --batch_size=64
 
-# Model architecture — default is ViT head; two lighter alternatives are available:
-#   --model_type=vit   Full Transformer head (default)
-#   --model_type=attn  Single self-attention layer (lighter)
-#   --model_type=mlp   Global-pool MLP head (lightest)
-# Example:
+# Model architecture — five heads are available via --model_type:
+#   vit       Full Transformer head (default)
+#   attn      Single self-attention layer (lighter)
+#   mlp       Global-pool MLP head (lightest UNet-backed option)
+#   hopfield  Modern Hopfield energy head on UNet backbone;
+#             energy wells form at learned prototypes (--hopfield_memories,
+#             --hopfield_beta control the number and sharpness of wells)
+#   cnn       Lightweight pure encoder — no UNet decoder or skip connections;
+#             ~4-8× fewer parameters, faster to train
+# Examples:
 python train.py \
   --dataset=cifar10 \
   --model_type=attn \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
+
+python train.py \
+  --dataset=cifar10 \
+  --model_type=hopfield \
+  --hopfield_memories=512 \
+  --hopfield_beta=8.0 \
+  --phase1_steps=145000 \
+  --phase2_steps=2000 \
+  --n_gibbs=200 \
+  --lambda_cd=1e-3 \
+  --epsilon_max=0.01 \
+  --fid_num_gen=50000 \
+  --fid_times=1.0,2.0,3.0,4.0,5.0 \
+  --batch_size=128
+
+python train.py \
+  --dataset=cifar10 \
+  --model_type=cnn \
   --phase1_steps=145000 \
   --phase2_steps=2000 \
   --n_gibbs=200 \
@@ -222,7 +253,48 @@ cost and re-attach it later to a cheaper pod just for downloading.
 
 ---
 
-## 9. Resume from a checkpoint
+## 9. Run inpainting
+
+After training, run the inpainting demo on CIFAR-10 test images:
+
+```bash
+source /workspace/venv/bin/activate
+cd /workspace/EnergyMatching/experiments/genmodel
+
+python inpainting.py \
+  --checkpoint /workspace/EnergyMatching/results/genmodel_TIMESTAMP/cifar10_checkpoint_phase1_final.pt \
+  --num_test_images 1 \
+  --mask_type center \
+  --num_chains 2 \
+  --n_inpaint_steps 300 \
+  --inpaint_savedir results/inpainting
+```
+
+Results are saved to `results/inpainting/inpaint_0000.png` as a grid:
+`[original | masked input | chain 0 | chain 1 | ...]`
+
+To enable the interaction energy (encourages diverse completions):
+
+```bash
+python inpainting.py \
+  --checkpoint /workspace/EnergyMatching/results/genmodel_TIMESTAMP/cifar10_checkpoint_phase1_final.pt \
+  --num_test_images 1 \
+  --mask_type center \
+  --num_chains 4 \
+  --n_inpaint_steps 300 \
+  --interaction_sigma 0.5 \
+  --interaction_mask_fraction 0.5 \
+  --inpaint_savedir results/inpainting
+```
+
+`--interaction_mask_fraction` controls which sub-region of the mask drives diversity:
+`1.0` = full inpaint mask, `0.5` = inner half of its bounding box, `0.0` = disabled.
+
+Because results live on the Network Volume, they persist when the pod is stopped.
+
+---
+
+## 10. Resume from a checkpoint
 
 ```bash
 source /workspace/venv/bin/activate

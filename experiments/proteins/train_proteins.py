@@ -42,6 +42,7 @@ from torchcfm.conditional_flow_matching import (
 
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
+scaler = torch.amp.GradScaler('cuda') if use_cuda else None
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 os.chdir(cwd) 
@@ -97,7 +98,7 @@ def train(argv):
 
     tokenizer = Encoder()
     dataset = ProteinDataset(train_df, scenario, task, tokenizer, seq_len)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=FLAGS.batch_size, shuffle=True,num_workers=FLAGS.num_workers,drop_last=True,)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=FLAGS.batch_size, shuffle=True, num_workers=FLAGS.num_workers, drop_last=True, pin_memory=use_cuda)
     datalooper = infiniteloop(dataloader)
 
     # VAE model: Load VAE encoder/decoder
@@ -182,7 +183,7 @@ def train(argv):
             # -------------------------------------------------
             # (a) Sample real data & random noise
             # -------------------------------------------------
-            x1 = next(datalooper).to(device) 
+            x1 = next(datalooper).to(device, non_blocking=use_cuda)
             # Get token embeddings 
             with torch.no_grad():
                 x1 = vae_model.forward(x1)[1].unsqueeze(1)
@@ -199,10 +200,11 @@ def train(argv):
             # -------------------------------------------------
             # EBStaticModelWrapper ignores 't' in potential/velocity,
             # but we keep the code for clarity.
-            vt = net_model(t, xt.permute(0,2,1)).permute(0,2,1)  # predicted velocity
-            flow_mse = (vt - ut).square()
-            w_flow_ = flow_weight(t, cutoff=FLAGS.time_cutoff)
-            flow_loss = torch.mean(w_flow_ * flow_mse.mean(dim=[1, 2]))
+            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_cuda):
+                vt = net_model(t, xt.permute(0,2,1)).permute(0,2,1)  # predicted velocity
+                flow_mse = (vt - ut).square()
+                w_flow_ = flow_weight(t, cutoff=FLAGS.time_cutoff)
+                flow_loss = torch.mean(w_flow_ * flow_mse.mean(dim=[1, 2]))
 
             # -------------------------------------------------
             # (2) CD LOSS at t=1 only
@@ -211,7 +213,8 @@ def train(argv):
             if step > step_switch_to_CD:
                 FLAGS.lambda_cd = 1e-4
             if FLAGS.lambda_cd > 0.0:
-                pos_energy_1 = net_model.potential(x1.permute(0,2,1), torch.ones_like(t))
+                with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_cuda):
+                    pos_energy_1 = net_model.potential(x1.permute(0,2,1), torch.ones_like(t))
 
                 n = x1.shape[0]
                 half = n // 2
@@ -226,7 +229,8 @@ def train(argv):
                     clamp=False
                 )
 
-                neg_energy_1 = net_model.potential(x_neg_1, torch.ones_like(t))
+                with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_cuda):
+                    neg_energy_1 = net_model.potential(x_neg_1, torch.ones_like(t))
                 cd_val = pos_energy_1.mean() - neg_energy_1.mean()
                 cd_loss = FLAGS.lambda_cd * cd_val
 
@@ -241,10 +245,16 @@ def train(argv):
             # Combine total loss: (flow + cd)
             # -------------------------------------------------
             total_loss = flow_loss + cd_loss
-            total_loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(net_model.parameters(), FLAGS.grad_clip)
-            optim.step()
+            if scaler is not None:
+                scaler.scale(total_loss).backward()
+                scaler.unscale_(optim)
+                torch.nn.utils.clip_grad_norm_(net_model.parameters(), FLAGS.grad_clip)
+                scaler.step(optim)
+                scaler.update()
+            else:
+                total_loss.backward()
+                torch.nn.utils.clip_grad_norm_(net_model.parameters(), FLAGS.grad_clip)
+                optim.step()
             sched.step()
 
             # EMA
@@ -260,13 +270,15 @@ def train(argv):
                 last_log_time = current_time
                 current_lr = sched.get_last_lr()[0]
 
-                logging.info(
+                msg = (
                     f"[Step {step}] "
                     f"flow={flow_loss.item():.6f}, "
                     f"cd={cd_loss.item():.6f}, "
                     f"LR={current_lr:.6f}, "
                     f"{steps_per_sec:.2f} it/s"
                 )
+                logging.info(msg)
+                print(msg, flush=True)
 
             # -------------------------------------------------
             # Save, Generate Samples, Checkpoints

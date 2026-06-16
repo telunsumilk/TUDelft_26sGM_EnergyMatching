@@ -1,5 +1,6 @@
 # File: utils_train.py
 
+import math
 import os
 import time
 import copy
@@ -517,10 +518,30 @@ def gibbs_sampling_n_steps_fast(x_init, model, t, n_steps, dt, epsilon):
 
 
 def warmup_lr(step):
-    """
-    Simple linear warmup schedule for LR.
-    """
+    """Linear warmup only (legacy, no cosine decay)."""
     return min(step, FLAGS.warmup) / FLAGS.warmup
+
+
+def make_lr_lambda(total_steps, warmup=None):
+    """
+    Returns a LambdaLR-compatible function.
+
+    With lr_cosine_decay=True (default): linear warmup over warmup steps
+    (defaults to FLAGS.warmup), then cosine decay from peak LR down to 0.
+    With lr_cosine_decay=False: linear warmup then flat (original behaviour).
+    Pass warmup=0 for phase 2 (no warmup, pure cosine from step 0).
+    """
+    warmup_steps = FLAGS.warmup if warmup is None else warmup
+    if FLAGS.lr_cosine_decay:
+        def lr_lambda(step):
+            if warmup_steps > 0 and step < warmup_steps:
+                return step / max(1, warmup_steps)
+            progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
+            progress = min(progress, 1.0)
+            return 0.5 * (1.0 + math.cos(math.pi * progress))
+        return lr_lambda
+    else:
+        return warmup_lr
 
 
 def ema(source, target, decay):

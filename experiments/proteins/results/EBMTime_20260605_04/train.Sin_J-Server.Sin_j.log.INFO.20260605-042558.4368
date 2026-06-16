@@ -1,0 +1,102 @@
+I0605 04:25:58.702577 46880 train_proteins.py:74] Using output directory: ./results/EBMTime_20260605_04
+
+I0605 04:25:58.702577 46880 train_proteins.py:79] ========== Hyperparameters (FLAGS) ==========
+I0605 04:25:58.702577 46880 train_proteins.py:81] logtostderr = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] alsologtostderr = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] log_dir = 
+I0605 04:25:58.702577 46880 train_proteins.py:81] v = 0
+I0605 04:25:58.702577 46880 train_proteins.py:81] verbosity = 0
+I0605 04:25:58.702577 46880 train_proteins.py:81] logger_levels = {}
+I0605 04:25:58.702577 46880 train_proteins.py:81] stderrthreshold = fatal
+I0605 04:25:58.702577 46880 train_proteins.py:81] showprefixforinfo = True
+I0605 04:25:58.702577 46880 train_proteins.py:81] run_with_pdb = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] pdb_post_mortem = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] pdb = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] run_with_profiling = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] profile_file = None
+I0605 04:25:58.702577 46880 train_proteins.py:81] use_cprofile_for_profiling = True
+I0605 04:25:58.702577 46880 train_proteins.py:81] only_check_args = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] model = EBMTime
+I0605 04:25:58.702577 46880 train_proteins.py:81] output_dir = ./results/
+I0605 04:25:58.702577 46880 train_proteins.py:81] num_channels = 128
+I0605 04:25:58.702577 46880 train_proteins.py:81] num_res_blocks = 2
+I0605 04:25:58.702577 46880 train_proteins.py:81] energy_clamp = None
+I0605 04:25:58.702577 46880 train_proteins.py:81] num_heads = 4
+I0605 04:25:58.702577 46880 train_proteins.py:81] num_head_channels = 64
+I0605 04:25:58.702577 46880 train_proteins.py:81] dropout = 0.1
+I0605 04:25:58.702577 46880 train_proteins.py:81] embed_dim = 256
+I0605 04:25:58.702577 46880 train_proteins.py:81] transformer_nheads = 4
+I0605 04:25:58.702577 46880 train_proteins.py:81] transformer_nlayers = 8
+I0605 04:25:58.702577 46880 train_proteins.py:81] output_scale = 1000.0
+I0605 04:25:58.702577 46880 train_proteins.py:81] channel_mult = ['1', '2', '2', '2']
+I0605 04:25:58.702577 46880 train_proteins.py:81] debug = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] lr = 0.0001
+I0605 04:25:58.702577 46880 train_proteins.py:81] grad_clip = 1.0
+I0605 04:25:58.702577 46880 train_proteins.py:81] total_steps = 13000
+I0605 04:25:58.702577 46880 train_proteins.py:81] warmup = 500
+I0605 04:25:58.702577 46880 train_proteins.py:81] batch_size = 128
+I0605 04:25:58.702577 46880 train_proteins.py:81] num_workers = 2
+I0605 04:25:58.702577 46880 train_proteins.py:81] ema_decay = 0.999
+I0605 04:25:58.702577 46880 train_proteins.py:81] save_step = 1000
+I0605 04:25:58.702577 46880 train_proteins.py:81] resume_ckpt = EBMTime_20260605_00_ver3/EBMTime_aav_hard_weights_step_10000.pt
+I0605 04:25:58.702577 46880 train_proteins.py:81] epsilon_max = 0.1
+I0605 04:25:58.702577 46880 train_proteins.py:81] dt_gibbs = 0.01
+I0605 04:25:58.702577 46880 train_proteins.py:81] n_gibbs = 200
+I0605 04:25:58.702577 46880 train_proteins.py:81] lambda_cd = 0.0
+I0605 04:25:58.702577 46880 train_proteins.py:81] time_cutoff = 0.9
+I0605 04:25:58.702577 46880 train_proteins.py:81] cd_neg_clamp = 1.0
+I0605 04:25:58.702577 46880 train_proteins.py:81] fid_freq = 50000
+I0605 04:25:58.702577 46880 train_proteins.py:81] fid_times = ['1.0', '1.1']
+I0605 04:25:58.702577 46880 train_proteins.py:81] fid_num_gen = 10000
+I0605 04:25:58.702577 46880 train_proteins.py:81] fid_dt = 0.01
+I0605 04:25:58.702577 46880 train_proteins.py:81] my_log_dir = ./results/EBMTime_20260605_04
+I0605 04:25:58.702577 46880 train_proteins.py:81] ? = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] help = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] helpshort = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] helpfull = False
+I0605 04:25:58.702577 46880 train_proteins.py:81] helpxml = False
+I0605 04:25:58.702577 46880 train_proteins.py:82] =============================================
+
+I0605 04:25:58.813610 46880 train_proteins.py:136] === Parameter Counts ===
+I0605 04:25:58.813610 46880 train_proteins.py:137] UNet portion:         367641
+I0605 04:25:58.813610 46880 train_proteins.py:138] Transformer portion:  0
+I0605 04:25:58.813610 46880 train_proteins.py:139] Total:                367641
+I0605 04:25:58.813610 46880 train_proteins.py:140] Total (in millions):  0.37 M
+
+I0605 04:25:58.813610 46880 train_proteins.py:154] Resuming from checkpoint: C:\Users\a1274\OneDrive\桌面\TUDelft_26sGM_EnergyMatching\experiments\proteins\results\EBMTime_20260605_00_ver3/EBMTime_aav_hard_weights_step_10000.pt
+I0605 04:25:58.948331 46880 train_proteins.py:161] Resumed at step 10000
+I0605 04:26:07.113788 46880 train_proteins.py:280] [Step 10000] flow=1.298531, cd=0.000000, LR=0.000100, 12.25 it/s
+I0605 04:26:13.770538 46880 train_proteins.py:322] Checkpoint saved to ./results/EBMTime_20260605_04\EBMTime_aav_hard_weights_step_10000.pt
+I0605 04:33:26.751938 46880 train_proteins.py:280] [Step 10100] flow=1.122145, cd=0.001044, LR=0.000100, 0.23 it/s
+I0605 04:40:50.419201 46880 train_proteins.py:280] [Step 10200] flow=0.817776, cd=-0.000019, LR=0.000100, 0.23 it/s
+I0605 04:48:12.768173 46880 train_proteins.py:280] [Step 10300] flow=1.156902, cd=0.001202, LR=0.000100, 0.23 it/s
+I0605 04:55:31.985360 46880 train_proteins.py:280] [Step 10400] flow=1.061207, cd=0.001055, LR=0.000100, 0.23 it/s
+I0605 05:02:51.816548 46880 train_proteins.py:280] [Step 10500] flow=0.793533, cd=-0.000077, LR=0.000100, 0.23 it/s
+I0605 05:10:15.106924 46880 train_proteins.py:280] [Step 10600] flow=0.830112, cd=0.000315, LR=0.000100, 0.23 it/s
+I0605 05:17:35.119183 46880 train_proteins.py:280] [Step 10700] flow=0.792766, cd=0.000233, LR=0.000100, 0.23 it/s
+I0605 05:24:56.354408 46880 train_proteins.py:280] [Step 10800] flow=1.098430, cd=0.000565, LR=0.000100, 0.23 it/s
+I0605 05:32:15.961442 46880 train_proteins.py:280] [Step 10900] flow=0.849625, cd=0.000326, LR=0.000100, 0.23 it/s
+I0605 05:39:50.644706 46880 train_proteins.py:280] [Step 11000] flow=0.805399, cd=0.000453, LR=0.000100, 0.22 it/s
+I0605 05:39:55.368110 46880 train_proteins.py:322] Checkpoint saved to ./results/EBMTime_20260605_04\EBMTime_aav_hard_weights_step_11000.pt
+I0605 05:47:26.621997 46880 train_proteins.py:280] [Step 11100] flow=1.143744, cd=0.000707, LR=0.000100, 0.22 it/s
+I0605 05:54:57.981886 46880 train_proteins.py:280] [Step 11200] flow=0.931392, cd=-0.000030, LR=0.000100, 0.22 it/s
+I0605 06:02:27.711183 46880 train_proteins.py:280] [Step 11300] flow=0.842058, cd=0.000050, LR=0.000100, 0.22 it/s
+I0605 06:09:52.752556 46880 train_proteins.py:280] [Step 11400] flow=1.360056, cd=0.000870, LR=0.000100, 0.22 it/s
+I0605 06:17:15.977780 46880 train_proteins.py:280] [Step 11500] flow=0.979409, cd=0.000877, LR=0.000100, 0.23 it/s
+I0605 06:24:37.053114 46880 train_proteins.py:280] [Step 11600] flow=1.226487, cd=0.000796, LR=0.000100, 0.23 it/s
+I0605 06:31:56.301246 46880 train_proteins.py:280] [Step 11700] flow=0.796395, cd=0.000018, LR=0.000100, 0.23 it/s
+I0605 06:39:17.858685 46880 train_proteins.py:280] [Step 11800] flow=0.799936, cd=0.000418, LR=0.000100, 0.23 it/s
+I0605 06:46:37.971629 46880 train_proteins.py:280] [Step 11900] flow=0.890781, cd=-0.000030, LR=0.000100, 0.23 it/s
+I0605 06:53:51.616826 46880 train_proteins.py:280] [Step 12000] flow=1.385853, cd=0.000859, LR=0.000100, 0.23 it/s
+I0605 06:53:56.292540 46880 train_proteins.py:322] Checkpoint saved to ./results/EBMTime_20260605_04\EBMTime_aav_hard_weights_step_12000.pt
+I0605 07:01:07.785486 46880 train_proteins.py:280] [Step 12100] flow=1.011523, cd=-0.000021, LR=0.000100, 0.23 it/s
+I0605 07:08:24.028276 46880 train_proteins.py:280] [Step 12200] flow=0.786521, cd=0.000271, LR=0.000100, 0.23 it/s
+I0605 07:15:47.423211 46880 train_proteins.py:280] [Step 12300] flow=1.128044, cd=0.000682, LR=0.000100, 0.23 it/s
+I0605 07:23:03.665355 46880 train_proteins.py:280] [Step 12400] flow=1.662979, cd=0.000563, LR=0.000100, 0.23 it/s
+I0605 07:30:24.624472 46880 train_proteins.py:280] [Step 12500] flow=1.784738, cd=0.001162, LR=0.000100, 0.23 it/s
+I0605 07:37:46.579110 46880 train_proteins.py:280] [Step 12600] flow=0.976483, cd=0.000121, LR=0.000100, 0.23 it/s
+I0605 07:44:53.757351 46880 train_proteins.py:280] [Step 12700] flow=0.725459, cd=-0.000084, LR=0.000100, 0.23 it/s
+I0605 07:52:13.956519 46880 train_proteins.py:280] [Step 12800] flow=0.779498, cd=0.000058, LR=0.000100, 0.23 it/s
+I0605 07:59:31.016613 46880 train_proteins.py:280] [Step 12900] flow=0.837338, cd=0.000100, LR=0.000100, 0.23 it/s
+I0605 08:06:53.905127 46880 train_proteins.py:280] [Step 13000] flow=0.914450, cd=0.000508, LR=0.000100, 0.23 it/s
+I0605 08:06:59.106965 46880 train_proteins.py:322] Checkpoint saved to ./results/EBMTime_20260605_04\EBMTime_aav_hard_weights_step_13000.pt

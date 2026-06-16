@@ -20,6 +20,7 @@ Resume from phase1_final checkpoint (skip Phase 1):
 """
 
 import copy
+import math
 import os
 import sys
 import time
@@ -40,10 +41,13 @@ from utils_cifar_imagenet import (
     generate_samples,
     gibbs_sampling_time_sweep,
     infiniteloop,
+    make_lr_lambda,
     save_pos_neg_grids,
-    warmup_lr,
 )
-from network_transformer_vit import EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper
+from network_transformer_vit import (
+    EBViTModelWrapper, EBAttnModelWrapper, EBMLPModelWrapper,
+    EBHopfieldModelWrapper,
+)
 
 
 # =========================================================================== #
@@ -55,18 +59,18 @@ def get_dataset():
     if FLAGS.dataset == "cifar10":
         from dataset_cifar import get_cifar10_dataset
         class_indices = [int(c) for c in FLAGS.cifar_classes] or None
-        return get_cifar10_dataset(class_indices=class_indices)
+        return get_cifar10_dataset(class_indices=class_indices, color_jitter=FLAGS.color_jitter)
     elif FLAGS.dataset == "imagenet32":
         from dataset_imagenet32 import ImageNet32Dataset
         class_indices = [int(c) for c in FLAGS.imagenet_classes] or None
+        extra = []
+        if FLAGS.color_jitter > 0.0:
+            extra.append(T.ColorJitter(brightness=FLAGS.color_jitter, contrast=FLAGS.color_jitter,
+                                       saturation=FLAGS.color_jitter, hue=FLAGS.color_jitter / 4))
         return ImageNet32Dataset(
             split="train",
-            transform=T.Compose([
-                T.ToPILImage(),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]),
+            transform=T.Compose([T.ToPILImage(), T.RandomHorizontalFlip(), *extra,
+                                  T.ToTensor(), T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]),
             class_indices=class_indices,
         )
     raise ValueError(f"Unknown dataset: {FLAGS.dataset!r}")
@@ -105,6 +109,13 @@ def build_model(device):
             embed_dim=FLAGS.embed_dim,
             attn_nheads=FLAGS.transformer_nheads,
         )
+    elif FLAGS.model_type == "hopfield":
+        model = EBHopfieldModelWrapper(
+            **common,
+            n_memories=FLAGS.hopfield_memories,
+            embed_dim=FLAGS.embed_dim,
+            hopfield_beta=FLAGS.hopfield_beta,
+        )
     else:  # mlp
         model = EBMLPModelWrapper(**common)
     model = model.to(device)
@@ -112,9 +123,9 @@ def build_model(device):
     return model, ema_model
 
 
-def build_optimizer(model):
+def build_optimizer(model, total_steps):
     optimizer = torch.optim.Adam(model.parameters(), lr=FLAGS.lr, betas=(0.9, 0.95))
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_lr)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=make_lr_lambda(total_steps))
     return optimizer, scheduler
 
 
@@ -277,6 +288,12 @@ def _train_loop(
             scheduler.step()
             ema(model, ema_model, ema_decay)
 
+            if not math.isfinite(loss.item()):
+                logging.error(
+                    f"[{phase_tag} step {step}] loss={loss.item()} — stopping early."
+                )
+                break
+
             if step % log_every == 0:
                 now = time.time()
                 elapsed = now - last_log_time
@@ -321,13 +338,22 @@ def _periodic_save(model, ema_model, optimizer, scheduler,
 # Phase wrappers
 # =========================================================================== #
 
+def _resolve_ema_decay(flag_value, n_steps):
+    """Return flag_value if explicitly set, else auto-compute exp(-10 / n_steps)."""
+    if flag_value >= 0.0:
+        return flag_value
+    decay = math.exp(-10.0 / n_steps)
+    logging.info(f"EMA decay auto-computed: exp(-10 / {n_steps}) = {decay:.6f}")
+    return decay
+
+
 def train_phase1(model, ema_model, optimizer, scheduler,
                  datalooper, flow_matcher, device, savedir,
                  scaler=None, amp_dtype=None):
     """Phase 1 — OT flow matching (Algorithm 1)."""
     logging.info(
         f"=== Phase 1: {FLAGS.phase1_steps} steps, "
-        f"ema_decay={FLAGS.phase1_ema_decay}, "
+        f"ema_decay={_resolve_ema_decay(FLAGS.phase1_ema_decay, FLAGS.phase1_steps):.6f}, "
         f"use_flow_weight={FLAGS.use_flow_weight} ==="
     )
 
@@ -341,7 +367,7 @@ def train_phase1(model, ema_model, optimizer, scheduler,
         step_fn, datalooper,
         total_steps=FLAGS.phase1_steps,
         start_step=0,
-        ema_decay=FLAGS.phase1_ema_decay,
+        ema_decay=_resolve_ema_decay(FLAGS.phase1_ema_decay, FLAGS.phase1_steps),
         device=device,
         savedir=savedir,
         phase_tag="phase1",
@@ -356,7 +382,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
     """Phase 2 — OT flow + Contrastive Divergence (Algorithm 2)."""
     logging.info(
         f"=== Phase 2: {FLAGS.phase2_steps} steps, "
-        f"ema_decay={FLAGS.phase2_ema_decay}, "
+        f"ema_decay={_resolve_ema_decay(FLAGS.phase2_ema_decay, FLAGS.phase2_steps):.6f}, "
         f"lambda_cd={FLAGS.lambda_cd}, n_gibbs={FLAGS.n_gibbs} ==="
     )
 
@@ -366,7 +392,7 @@ def train_phase2(model, ema_model, optimizer, scheduler,
         total_loss, f_loss, cd_loss, pos_e, neg_e = cd_step(
             model, flow_matcher, x_real_flow, x_real_cd, device
         )
-        return total_loss, {
+        log = {
             "flow":    f_loss.item(),
             "cd":      cd_loss.item(),
             "pos_min": pos_e.min().item(),
@@ -376,13 +402,18 @@ def train_phase2(model, ema_model, optimizer, scheduler,
             "neg_max": neg_e.max().item(),
             "neg_std": neg_e.std().item(),
         }
+        if FLAGS.model_type == "hopfield" and hasattr(model, "count_active_memories"):
+            n_per, n_total = model.count_active_memories(x_real_cd)
+            log["mem_per_sample"] = n_per
+            log["mem_active"] = float(n_total)
+        return total_loss, log
 
     _train_loop(
         model, ema_model, optimizer, scheduler,
         step_fn, datalooper,
         total_steps=FLAGS.phase2_steps,
         start_step=FLAGS.phase1_steps,
-        ema_decay=FLAGS.phase2_ema_decay,
+        ema_decay=_resolve_ema_decay(FLAGS.phase2_ema_decay, FLAGS.phase2_steps),
         device=device,
         savedir=savedir,
         phase_tag="phase2",
@@ -440,7 +471,7 @@ def main(argv):
     datalooper = infiniteloop(dataloader)
 
     model, ema_model = build_model(device)
-    optimizer, scheduler = build_optimizer(model)
+    optimizer, scheduler = build_optimizer(model, FLAGS.phase1_steps)
     load_checkpoint(model, ema_model, optimizer, scheduler, device)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -464,6 +495,19 @@ def main(argv):
     # Phase 2
     # ------------------------------------------------------------------ #
     if not FLAGS.skip_phase2:
+        # Reset optimizer LR for phase 2 — phase 1 cosine has decayed to ~0.
+        # Must set both 'lr' and 'initial_lr': LambdaLR reads initial_lr as
+        # its base_lr and would otherwise inherit the phase 1 peak (2e-3).
+        for pg in optimizer.param_groups:
+            pg['lr'] = FLAGS.phase2_lr
+            pg['initial_lr'] = FLAGS.phase2_lr
+        if FLAGS.phase2_cosine:
+            phase2_lr_lambda = make_lr_lambda(FLAGS.phase2_steps, warmup=0)
+        else:
+            phase2_lr_lambda = lambda step: 1.0
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=phase2_lr_lambda)
+        logging.info(f"Phase 2 optimizer reset: lr={FLAGS.phase2_lr}, "
+                     f"{'cosine' if FLAGS.phase2_cosine else 'flat'} over {FLAGS.phase2_steps} steps")
         train_phase2(model, ema_model, optimizer, scheduler,
                      datalooper, flow_matcher, device, savedir,
                      scaler=scaler, amp_dtype=amp_dtype)

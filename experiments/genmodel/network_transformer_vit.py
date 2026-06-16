@@ -456,3 +456,116 @@ class EBAttnModelWrapper(UNetModelWrapper):
             return self.potential(x, t)
         else:
             return self.velocity(x, t)
+
+
+##############################################################################
+# 4) Modern Hopfield energy head (UNet backbone + Hopfield scalar)
+##############################################################################
+class EBHopfieldModelWrapper(UNetModelWrapper):
+    """
+    Modern Hopfield energy head on top of the UNet backbone.
+
+    V(x) = -(1/β) * logsumexp(β · q(x) · Ξᵀ)
+
+    The gradient -∂V/∂x is a softmax-weighted average of the memory prototypes
+    Ξ (via the chain rule through q), so it naturally points toward the nearest
+    stored pattern.  Multi-modal by construction; no convexity constraint.
+
+    Reference: Ramsauer et al. (2020) "Hopfield Networks is All You Need".
+    """
+
+    def __init__(
+        self,
+        dim=(3, 32, 32),
+        num_channels=128,
+        num_res_blocks=2,
+        channel_mult=[1, 2, 2, 2],
+        attention_resolutions="16",
+        num_heads=4,
+        num_head_channels=64,
+        dropout=0.1,
+        class_cond=False,
+        learn_sigma=False,
+        use_checkpoint=False,
+        use_fp16=False,
+        resblock_updown=False,
+        use_scale_shift_norm=False,
+        use_new_attention_order=False,
+        n_memories=512,
+        embed_dim=128,
+        hopfield_beta=8.0,
+        output_scale=1000.0,
+        energy_clamp=None,
+        **kwargs
+    ):
+        super().__init__(
+            dim=dim,
+            num_channels=num_channels,
+            num_res_blocks=num_res_blocks,
+            channel_mult=channel_mult,
+            attention_resolutions=attention_resolutions,
+            num_heads=num_heads,
+            num_head_channels=num_head_channels,
+            dropout=dropout,
+            class_cond=class_cond,
+            learn_sigma=learn_sigma,
+            use_checkpoint=use_checkpoint,
+            use_fp16=use_fp16,
+            resblock_updown=resblock_updown,
+            use_scale_shift_norm=use_scale_shift_norm,
+            use_new_attention_order=use_new_attention_order,
+            **kwargs
+        )
+        self.out_channels = dim[0]
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.query_proj = nn.Linear(self.out_channels, embed_dim)
+        self.memories = nn.Parameter(torch.randn(n_memories, embed_dim) * 0.02)
+        self.hopfield_beta = hopfield_beta
+        self.output_scale = output_scale
+        self.energy_clamp = energy_clamp
+
+    def potential(self, x, t):
+        t_dummy = dummy_time(x, value=0.5)
+        unet_out = super().forward(t_dummy, x)                # (B, C, H, W)
+        pooled = self.pool(unet_out).squeeze(-1).squeeze(-1)  # (B, C)
+        q = self.query_proj(pooled)                           # (B, embed_dim)
+        logits = self.hopfield_beta * (q @ self.memories.T)   # (B, n_memories)
+        V = -torch.logsumexp(logits, dim=-1) / self.hopfield_beta  # (B,)
+        V = V * self.output_scale
+        if self.energy_clamp is not None:
+            V = soft_clamp(V, self.energy_clamp)
+        return V
+
+    def velocity(self, x, t):
+        with torch.enable_grad():
+            x = x.clone().detach().requires_grad_(True)
+            V = self.potential(x, t)
+            dVdx = torch.autograd.grad(
+                outputs=V,
+                inputs=x,
+                grad_outputs=torch.ones_like(V),
+                create_graph=self.training
+            )[0]
+            return -dVdx
+
+    def count_active_memories(self, x, threshold=0.01):
+        """Return (n_active_batch, n_active_total) over batch x.
+
+        n_active_batch  — mean number of prototypes with weight > threshold per sample.
+        n_active_total  — number of distinct prototypes that are argmax for any sample.
+        """
+        with torch.no_grad():
+            t_dummy = dummy_time(x, value=0.5)
+            unet_out = super().forward(t_dummy, x)
+            pooled = self.pool(unet_out).squeeze(-1).squeeze(-1)
+            q = self.query_proj(pooled)
+            logits = self.hopfield_beta * (q @ self.memories.T)
+            weights = torch.softmax(logits, dim=-1)
+            n_active_batch = (weights > threshold).float().sum(dim=-1).mean().item()
+            n_active_total = weights.argmax(dim=-1).unique().numel()
+        return n_active_batch, n_active_total
+
+    def forward(self, t, x, return_potential=False, *args, **kwargs):
+        if return_potential:
+            return self.potential(x, t)
+        return self.velocity(x, t)

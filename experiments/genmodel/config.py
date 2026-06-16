@@ -16,8 +16,9 @@ def define_flags():
     flags.DEFINE_string("model", "genmodel", "Model name prefix for timestamped output dir.")
     flags.DEFINE_string("output_dir", "../../results/", "Root directory for run outputs.")
     flags.DEFINE_string("my_log_dir", "", "Override directory for absl log files.")
-    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp"],
-                      "Head architecture: vit (full Transformer), attn (single MHA layer), mlp (global-pool MLP).")
+    flags.DEFINE_enum("model_type", "vit", ["vit", "attn", "mlp", "hopfield"],
+                      "Head architecture: vit (full Transformer), attn (single MHA layer), mlp (global-pool MLP), "
+                      "hopfield (Hopfield energy head on UNet backbone).")
 
     # ------------------------------------------------------------------ #
     # UNet architecture
@@ -44,9 +45,18 @@ def define_flags():
     flags.DEFINE_integer("transformer_nlayers", 8, "Transformer encoder depth.")
 
     # ------------------------------------------------------------------ #
+    # Hopfield head (model_type=hopfield only)
+    # ------------------------------------------------------------------ #
+    flags.DEFINE_integer("hopfield_memories", 512, "Number of Hopfield memory prototypes.")
+    flags.DEFINE_float("hopfield_beta", 8.0, "Hopfield inverse temperature β.")
+
+    # ------------------------------------------------------------------ #
     # Dataset
     # ------------------------------------------------------------------ #
     flags.DEFINE_string("dataset", "cifar10", "Dataset to use: cifar10 | imagenet32.")
+    flags.DEFINE_float("color_jitter", 0.0,
+                       "Color jitter strength for brightness/contrast/saturation (hue = strength/4). "
+                       "0 = disabled. Typical: 0.2 (mild) to 0.4 (strong).")
     flags.DEFINE_list("cifar_classes", [],
                       "Comma-separated CIFAR-10 class indices (0-9) to train on. "
                       "Empty = all 10 classes. "
@@ -60,7 +70,12 @@ def define_flags():
     # ------------------------------------------------------------------ #
     # Optimizer / scheduler
     # ------------------------------------------------------------------ #
-    flags.DEFINE_float("lr", 1.2e-3, "Peak learning rate. (ImageNet32 default: 6e-4)")
+    flags.DEFINE_float("lr", 2e-3, "Peak learning rate for phase 1. With cosine decay: 2e-3. Flat schedule: 1.2e-3. (ImageNet32 default: 6e-4)")
+    flags.DEFINE_float("phase2_lr", 1e-4, "Learning rate for phase 2 CD training (reset after phase 1 cosine decay).")
+    flags.DEFINE_bool("lr_cosine_decay", True,
+                      "Cosine decay after warmup (recommended). False = flat LR after warmup.")
+    flags.DEFINE_bool("phase2_cosine", True,
+                      "Cosine LR decay for phase 2 (default True). False = flat LR throughout phase 2.")
     flags.DEFINE_float("grad_clip", 1.0, "Gradient norm clipping threshold.")
     flags.DEFINE_integer("warmup", 10000, "Linear LR warmup steps.")
     flags.DEFINE_integer("batch_size", 128, "Per-GPU batch size.")
@@ -74,7 +89,9 @@ def define_flags():
     # ------------------------------------------------------------------ #
     flags.DEFINE_integer("phase1_steps", 145000,
                          "Phase 1 training steps. (ImageNet32 default: 640000)")
-    flags.DEFINE_float("phase1_ema_decay", 0.9999, "EMA decay factor during Phase 1.")
+    flags.DEFINE_float("phase1_ema_decay", -1.0,
+                     "EMA decay factor during Phase 1. "
+                     "-1 = auto: exp(-10 / phase1_steps), e.g. 0.9993 at 15K, 0.99993 at 145K.")
     flags.DEFINE_bool("use_flow_weight", True,
                       "Apply time-dependent flow loss weighting. Set False for ImageNet32.")
     flags.DEFINE_float("time_cutoff", 1.0,
@@ -84,7 +101,9 @@ def define_flags():
     # Phase 2 (OT flow + Contrastive Divergence)
     # ------------------------------------------------------------------ #
     flags.DEFINE_integer("phase2_steps", 2000, "Phase 2 training steps.")
-    flags.DEFINE_float("phase2_ema_decay", 0.99, "EMA decay factor during Phase 2.")
+    flags.DEFINE_float("phase2_ema_decay", -1.0,
+                     "EMA decay factor during Phase 2. "
+                     "-1 = auto: exp(-10 / phase2_steps).")
     flags.DEFINE_float("lambda_cd", 0.0, "CD loss coefficient (0 = Phase 1 only).")
     flags.DEFINE_integer("n_gibbs", 0, "MCMC steps for negative sample generation.")
     flags.DEFINE_float("dt_gibbs", 0.01, "Step size for Gibbs / SDE sampling.")

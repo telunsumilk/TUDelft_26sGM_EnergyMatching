@@ -13,15 +13,16 @@ def _maybe_subset(dataset, class_indices):
     return Subset(dataset, indices)
 
 
-def get_cifar10_dataset(root=None, class_indices=None):
-    """Training dataset: random horizontal flip + normalize to [-1, 1]."""
+def get_cifar10_dataset(root=None, class_indices=None, color_jitter=0.0):
+    """Training dataset: random horizontal flip + optional color jitter, normalized to [-1, 1]."""
     if root is None:
         root = os.environ.get("CIFAR10_PATH", "./data")
-    transform = T.Compose([
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    extra = []
+    if color_jitter > 0.0:
+        extra.append(T.ColorJitter(brightness=color_jitter, contrast=color_jitter,
+                                   saturation=color_jitter, hue=color_jitter / 4))
+    transform = T.Compose([T.RandomHorizontalFlip(), *extra,
+                           T.ToTensor(), T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     return _maybe_subset(CIFAR10(root=root, train=True, download=True, transform=transform), class_indices)
 
 
