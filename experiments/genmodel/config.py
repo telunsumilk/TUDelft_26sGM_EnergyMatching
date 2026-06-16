@@ -74,6 +74,8 @@ def define_flags():
     flags.DEFINE_float("phase2_lr", 1e-4, "Learning rate for phase 2 CD training (reset after phase 1 cosine decay).")
     flags.DEFINE_bool("lr_cosine_decay", True,
                       "Cosine decay after warmup (recommended). False = flat LR after warmup.")
+    flags.DEFINE_bool("phase2_cosine", True,
+                      "Cosine LR decay for phase 2 (default True). False = flat LR throughout phase 2.")
     flags.DEFINE_float("grad_clip", 1.0, "Gradient norm clipping threshold.")
     flags.DEFINE_integer("warmup", 10000, "Linear LR warmup steps.")
     flags.DEFINE_integer("batch_size", 128, "Per-GPU batch size.")

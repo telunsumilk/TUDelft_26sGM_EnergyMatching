@@ -501,10 +501,13 @@ def main(argv):
         for pg in optimizer.param_groups:
             pg['lr'] = FLAGS.phase2_lr
             pg['initial_lr'] = FLAGS.phase2_lr
-        scheduler = torch.optim.lr_scheduler.LambdaLR(
-            optimizer, lr_lambda=make_lr_lambda(FLAGS.phase2_steps, warmup=0)
-        )
-        logging.info(f"Phase 2 optimizer reset: lr={FLAGS.phase2_lr}, cosine over {FLAGS.phase2_steps} steps")
+        if FLAGS.phase2_cosine:
+            phase2_lr_lambda = make_lr_lambda(FLAGS.phase2_steps, warmup=0)
+        else:
+            phase2_lr_lambda = lambda step: 1.0
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=phase2_lr_lambda)
+        logging.info(f"Phase 2 optimizer reset: lr={FLAGS.phase2_lr}, "
+                     f"{'cosine' if FLAGS.phase2_cosine else 'flat'} over {FLAGS.phase2_steps} steps")
         train_phase2(model, ema_model, optimizer, scheduler,
                      datalooper, flow_matcher, device, savedir,
                      scaler=scaler, amp_dtype=amp_dtype)
