@@ -1,0 +1,71 @@
+I0605 13:05:08.296430 137044197082944 train_cifar_multigpu.py:183] [Rank 0] Using output directory: ./results/EBMTime_20260605_13
+
+I0605 13:05:08.296849 137044197082944 train_cifar_multigpu.py:184] ========== Hyperparameters (FLAGS) ==========
+I0605 13:05:08.297216 137044197082944 train_cifar_multigpu.py:186] logtostderr = False
+I0605 13:05:08.297629 137044197082944 train_cifar_multigpu.py:186] alsologtostderr = False
+I0605 13:05:08.298111 137044197082944 train_cifar_multigpu.py:186] log_dir = 
+I0605 13:05:08.298526 137044197082944 train_cifar_multigpu.py:186] v = 0
+I0605 13:05:08.299000 137044197082944 train_cifar_multigpu.py:186] verbosity = 0
+I0605 13:05:08.299395 137044197082944 train_cifar_multigpu.py:186] logger_levels = {}
+I0605 13:05:08.299976 137044197082944 train_cifar_multigpu.py:186] stderrthreshold = fatal
+I0605 13:05:08.305823 137044197082944 train_cifar_multigpu.py:186] showprefixforinfo = True
+I0605 13:05:08.306523 137044197082944 train_cifar_multigpu.py:186] run_with_pdb = False
+I0605 13:05:08.307087 137044197082944 train_cifar_multigpu.py:186] pdb_post_mortem = False
+I0605 13:05:08.307632 137044197082944 train_cifar_multigpu.py:186] pdb = False
+I0605 13:05:08.308241 137044197082944 train_cifar_multigpu.py:186] run_with_profiling = False
+I0605 13:05:08.308703 137044197082944 train_cifar_multigpu.py:186] profile_file = None
+I0605 13:05:08.309206 137044197082944 train_cifar_multigpu.py:186] use_cprofile_for_profiling = True
+I0605 13:05:08.309622 137044197082944 train_cifar_multigpu.py:186] only_check_args = False
+I0605 13:05:08.310045 137044197082944 train_cifar_multigpu.py:186] model = EBMTime
+I0605 13:05:08.310837 137044197082944 train_cifar_multigpu.py:186] output_dir = ./results/
+I0605 13:05:08.311251 137044197082944 train_cifar_multigpu.py:186] num_channels = 128
+I0605 13:05:08.311784 137044197082944 train_cifar_multigpu.py:186] num_res_blocks = 2
+I0605 13:05:08.312199 137044197082944 train_cifar_multigpu.py:186] energy_clamp = None
+I0605 13:05:08.312492 137044197082944 train_cifar_multigpu.py:186] num_heads = 4
+I0605 13:05:08.313040 137044197082944 train_cifar_multigpu.py:186] num_head_channels = 64
+I0605 13:05:08.313529 137044197082944 train_cifar_multigpu.py:186] dropout = 0.1
+I0605 13:05:08.313963 137044197082944 train_cifar_multigpu.py:186] attention_resolutions = 16
+I0605 13:05:08.314342 137044197082944 train_cifar_multigpu.py:186] embed_dim = 384
+I0605 13:05:08.314652 137044197082944 train_cifar_multigpu.py:186] transformer_nheads = 4
+I0605 13:05:08.315133 137044197082944 train_cifar_multigpu.py:186] transformer_nlayers = 8
+I0605 13:05:08.315930 137044197082944 train_cifar_multigpu.py:186] output_scale = 1000.0
+I0605 13:05:08.316307 137044197082944 train_cifar_multigpu.py:186] channel_mult = ['1', '2', '2', '2']
+I0605 13:05:08.316666 137044197082944 train_cifar_multigpu.py:186] debug = False
+I0605 13:05:08.316976 137044197082944 train_cifar_multigpu.py:186] lr = 0.0012
+I0605 13:05:08.317558 137044197082944 train_cifar_multigpu.py:186] grad_clip = 1.0
+I0605 13:05:08.318038 137044197082944 train_cifar_multigpu.py:186] total_steps = 147000
+I0605 13:05:08.318489 137044197082944 train_cifar_multigpu.py:186] warmup = 10000
+I0605 13:05:08.318778 137044197082944 train_cifar_multigpu.py:186] batch_size = 128
+I0605 13:05:08.319118 137044197082944 train_cifar_multigpu.py:186] num_workers = 4
+I0605 13:05:08.319597 137044197082944 train_cifar_multigpu.py:186] ema_decay = 0.99
+I0605 13:05:08.319967 137044197082944 train_cifar_multigpu.py:186] save_step = 100
+I0605 13:05:08.320349 137044197082944 train_cifar_multigpu.py:186] resume_ckpt = /workspace/TUDelft_26sGM_EnergyMatching/checkpoints/cifar10_warm_up_145000.pt
+I0605 13:05:08.320900 137044197082944 train_cifar_multigpu.py:186] epsilon_max = 0.01
+I0605 13:05:08.321294 137044197082944 train_cifar_multigpu.py:186] dt_gibbs = 0.01
+I0605 13:05:08.321720 137044197082944 train_cifar_multigpu.py:186] n_gibbs = 200
+I0605 13:05:08.321950 137044197082944 train_cifar_multigpu.py:186] lambda_cd = 0.001
+I0605 13:05:08.322339 137044197082944 train_cifar_multigpu.py:186] time_cutoff = 1.0
+I0605 13:05:08.322970 137044197082944 train_cifar_multigpu.py:186] cd_neg_clamp = 0.02
+I0605 13:05:08.323286 137044197082944 train_cifar_multigpu.py:186] cd_trim_fraction = 0.1
+I0605 13:05:08.323678 137044197082944 train_cifar_multigpu.py:186] split_negative = True
+I0605 13:05:08.324142 137044197082944 train_cifar_multigpu.py:186] same_temperature_scheduler = True
+I0605 13:05:08.324546 137044197082944 train_cifar_multigpu.py:186] my_log_dir = ./results/EBMTime_20260605_13
+I0605 13:05:08.324856 137044197082944 train_cifar_multigpu.py:186] ? = False
+I0605 13:05:08.325228 137044197082944 train_cifar_multigpu.py:186] help = False
+I0605 13:05:08.325780 137044197082944 train_cifar_multigpu.py:186] helpshort = False
+I0605 13:05:08.326138 137044197082944 train_cifar_multigpu.py:186] helpfull = False
+I0605 13:05:08.326521 137044197082944 train_cifar_multigpu.py:186] helpxml = False
+I0605 13:05:08.326835 137044197082944 train_cifar_multigpu.py:187] =============================================
+
+I0605 13:19:29.654710 137044197082944 train_cifar_multigpu.py:265] Total trainable params: 49985796
+I0605 13:19:29.658312 137044197082944 train_cifar_multigpu.py:283] [Rank 0] Resuming from /workspace/TUDelft_26sGM_EnergyMatching/checkpoints/cifar10_warm_up_145000.pt
+I0605 13:19:39.538518 137044197082944 train_cifar_multigpu.py:303] [Rank 0] Resumed at step=145000
+I0605 13:20:12.215671 137044197082944 train_cifar_multigpu.py:362] [Step 145000] flow=0.14229, cd=0.67912, pos_std=218.82384, pos_min=-2591.69238, pos_max=-1519.44849, neg_std=235.37706, neg_min=-3007.04932, neg_max=-1835.98706, LR=0.001200, 0.31 it/s
+I0605 13:20:54.175803 137044197082944 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to ./results/EBMTime_20260605_13/normal_time_evolution_step_145000.png
+I0605 13:21:32.733508 137044197082944 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to ./results/EBMTime_20260605_13/normal_gibbs_diagnostic_step_145000.png
+I0605 13:22:14.184293 137044197082944 utils_cifar_imagenet.py:396] Time evolution SDE plot saved to ./results/EBMTime_20260605_13/ema_time_evolution_step_145000.png
+I0605 13:22:52.639212 137044197082944 utils_cifar_imagenet.py:458] Gibbs diagnostic plot saved to ./results/EBMTime_20260605_13/ema_gibbs_diagnostic_step_145000.png
+I0605 13:23:11.448832 137044197082944 train_cifar_multigpu.py:411] [Rank 0] Saved checkpoint => ./results/EBMTime_20260605_13/EBMTime_cifar10_weights_step_latest.pt
+I0605 13:23:11.449606 137044197082944 train_cifar_multigpu.py:412] [Rank 0] Saved checkpoint => ./results/EBMTime_20260605_13/checkpoint_145000.pt
+I0605 13:27:36.988918 137044197082944 train_cifar_multigpu.py:362] [Step 145010] flow=0.21081, cd=0.01315, pos_std=48.72806, pos_min=-2915.89624, pos_max=-2624.31616, neg_std=51.55566, neg_min=-2894.53638, neg_max=-2647.01855, LR=0.001200, 0.02 it/s
+I0605 13:32:03.078907 137044197082944 train_cifar_multigpu.py:362] [Step 145020] flow=0.19390, cd=0.02014, pos_std=50.77129, pos_min=-3028.99780, pos_max=-2742.61597, neg_std=51.91901, neg_min=-2984.28931, neg_max=-2750.27979, LR=0.001200, 0.04 it/s
