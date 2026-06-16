@@ -1,0 +1,4 @@
+I0605 23:13:25.895432 136608852776768 fid_cifar_heun_1gpu.py:143] Saving logs to: ../../results/fid_quick/EBMTime_20260605_23
+I0605 23:13:25.896005 136608852776768 fid_cifar_heun_1gpu.py:144] Using device: cuda
+I0605 23:13:30.336200 136608852776768 fid_cifar_heun_1gpu.py:172] Loading checkpoint: ../../results/genmodel_20260605_17/cifar10_checkpoint_final.pt
+I0605 23:13:49.493733 136608852776768 fid_cifar_heun_1gpu.py:176] Loaded EMA model.

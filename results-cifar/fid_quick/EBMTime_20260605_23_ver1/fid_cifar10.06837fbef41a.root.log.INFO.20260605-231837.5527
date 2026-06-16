@@ -1,0 +1,6 @@
+I0605 23:18:37.251570 130712679036736 fid_cifar_heun_1gpu.py:143] Saving logs to: ../../results/fid_quick/EBMTime_20260605_23_ver1
+I0605 23:18:37.252414 130712679036736 fid_cifar_heun_1gpu.py:144] Using device: cuda
+I0605 23:18:41.196730 130712679036736 fid_cifar_heun_1gpu.py:172] Loading checkpoint: ../../results/genmodel_20260605_17/cifar10_checkpoint_final.pt
+I0605 23:18:56.599722 130712679036736 fid_cifar_heun_1gpu.py:176] Loaded EMA model.
+I0605 23:19:21.616453 130712679036736 fid_cifar_heun_1gpu.py:190] Updating FID with real images...
+I0605 23:21:18.178562 130712679036736 fid_cifar_heun_1gpu.py:207] Generating 10000 fake samples for FID...
