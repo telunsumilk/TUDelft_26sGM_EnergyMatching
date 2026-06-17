@@ -1,0 +1,15 @@
+{
+  "script": "experiments/cifar10/generate_cifar_dataset.py",
+  "resume_ckpt": "checkpoints/EBMTime_cifar10_weights_step_latest.pt",
+  "checkpoint_weights": "ema_model",
+  "num_samples": 2000,
+  "batch_size": 16,
+  "t_end": 3.25,
+  "dt_gibbs": 0.01,
+  "time_cutoff": 1.0,
+  "epsilon_max": 0.01,
+  "progress_chunk_steps": 10,
+  "seed": 42,
+  "device": "cuda",
+  "timestamp": "2026-06-15T16:30:10"
+}

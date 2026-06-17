@@ -1,0 +1,15 @@
+{
+  "script": "experiments/mnist/generate_mnist_dataset.py",
+  "resume_ckpt": "results-mnist/EBMTime_20260605_01/checkpoint_50400.pt",
+  "checkpoint_weights": "ema_model",
+  "num_samples": 5000,
+  "batch_size": 64,
+  "t_end": 2.0,
+  "dt_gibbs": 0.01,
+  "time_cutoff": 1.0,
+  "epsilon_max": 0.01,
+  "progress_chunk_steps": 10,
+  "seed": 42,
+  "device": "cuda",
+  "timestamp": "2026-06-05T16:59:35"
+}
