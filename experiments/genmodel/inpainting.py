@@ -77,6 +77,12 @@ flags.DEFINE_float("zeta_inpaint", 0.1,
                    "Smaller = stronger pull toward observed values. "
                    "The fidelity gradient is 2ε/ζ² · mask · (y - x).")
 flags.DEFINE_float(
+    "fixed_t_inpaint", -1.0,
+    "If >= 0, use this fixed model time t for all Langevin steps instead of ramping t=0→tau_s. "
+    "Recommended: 0.99 (sharpest energy landscape near the data manifold). "
+    "When set, tau_s/tau_star still control the number of steps and ε schedule.",
+)
+flags.DEFINE_float(
     "interaction_sigma", 0.0,
     "σ for inter-chain interaction energy strength. "
     "Encourages diverse completions in the inpainted region.",
@@ -303,11 +309,14 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
     eps_max = FLAGS.epsilon_inpaint
     zeta = FLAGS.zeta_inpaint
     sigma = FLAGS.interaction_sigma
+    fixed_t = FLAGS.fixed_t_inpaint
+    use_fixed_t = fixed_t >= 0.0
 
     N_steps = max(1, int(round(tau_s / dt)))
+    fixed_t_info = f"  fixed_t={fixed_t}" if use_fixed_t else ""
     logging.info(
         f"Langevin: {N_steps} steps × dt={dt} = T={N_steps * dt:.2f}  "
-        f"tau_star={tau_star}  ε 0→{eps_max}  ζ={zeta}"
+        f"tau_star={tau_star}  ε 0→{eps_max}  ζ={zeta}{fixed_t_info}"
     )
 
     # Observed values repeated across chains: (N, C, H, W)
@@ -331,7 +340,8 @@ def run_inpainting(x_orig, inpaint_mask, model, device):
         epsilon_t = epsilon_at(t, eps_max, tau_star)
         noise_std = math.sqrt(2.0 * dt * epsilon_t) if epsilon_t > 0.0 else 0.0
 
-        t_tensor = torch.full((N,), t, device=device)
+        model_t = fixed_t if use_fixed_t else t
+        t_tensor = torch.full((N,), model_t, device=device)
 
         with torch.no_grad():
             # grad_V = ∇V(x) = -velocity(x, t)
@@ -425,6 +435,7 @@ def save_params(savedir):
         "dt_inpaint": FLAGS.dt_inpaint,
         "epsilon_inpaint": FLAGS.epsilon_inpaint,
         "zeta_inpaint": FLAGS.zeta_inpaint,
+        "fixed_t_inpaint": FLAGS.fixed_t_inpaint,
         "interaction_sigma": FLAGS.interaction_sigma,
         "interaction_mask_fraction": FLAGS.interaction_mask_fraction,
         "num_test_images": FLAGS.num_test_images,
