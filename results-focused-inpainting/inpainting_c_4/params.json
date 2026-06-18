@@ -1,0 +1,16 @@
+{
+  "checkpoint": "../../results/genmodel_best/cifar10_checkpoint_final.pt",
+  "input_image": "/workspace/cifar10/0002.png",
+  "mask_type": "center",
+  "mask_fraction": 0.25,
+  "num_chains": 8,
+  "tau_s_inpaint": 1.0,
+  "tau_star_inpaint": 0.7,
+  "dt_inpaint": 0.001,
+  "epsilon_inpaint": 0.01,
+  "zeta_inpaint": 0.02,
+  "interaction_sigma": 0.0,
+  "interaction_mask_fraction": 1.0,
+  "num_test_images": 8,
+  "model_type": "attn"
+}
